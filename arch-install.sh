@@ -33,14 +33,14 @@ if [ -n "$(hdparm -I /dev/${DSK} 2>&1 | grep 'TRIM supported')" ]; then
   HAS_TRIM=1
 fi
 
-labelroot="cryptedroot"
-labelswap="cryptedswap"
+labelroot="luksroot"
+labelswap="luksswap"
 labelboot="boot"
 partroot="/dev/disk/by-partlabel/$labelroot"
 partswap="/dev/disk/by-partlabel/$labelswap"
 partboot="/dev/disk/by-partlabel/$labelboot"
-maproot="crypt-root"
-mapswap="crypt-swap"
+maproot="croot"
+mapswap="cswap"
 mountpoint="/mnt"
 
 swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
