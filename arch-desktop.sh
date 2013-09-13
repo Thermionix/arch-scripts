@@ -5,10 +5,10 @@ pacman -S xorg-server xorg-server-utils xorg-xinit mesa
 pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
  
-pacman -S xf86-video-vesa
+#pacman -S xf86-video-vesa
  
-pacman -S mate mate-extras
-echo "exec mate-session" > ~/.xinitrc
+#pacman -S mate mate-extras
+#echo "exec mate-session" > ~/.xinitrc
  
 pacman -S firefox vlc p7zip clementine gstreamer0.10-plugins flashplugin
  
