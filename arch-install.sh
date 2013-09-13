@@ -5,7 +5,6 @@
 # ip route add default via <gw-ip>
 
 echo "## defining variables for installation"
-read -e -p "Set lang: " -i "en_AU-UTF-8" lang
 read -e -p "Set locale: " -i "en_AU.UTF-8" locale
 read -e -p "Set keyboard: " -i "us" keyboard
 read -e -p "Set zone: " -i "Australia" zone
@@ -16,7 +15,7 @@ read -e -p "Set username: " -i "thermionix" username
 
 echo "## updating locale"
 loadkeys $keyboard
-export LANG=$lang
+export LANG=$locale
 sed -i -e "s/#$locale/$locale/" /etc/locale.gen
 locale-gen
 
@@ -33,14 +32,14 @@ if [ -n "$(hdparm -I /dev/${DSK} 2>&1 | grep 'TRIM supported')" ]; then
   HAS_TRIM=1
 fi
 
-labelroot="cryptedroot"
-labelswap="cryptedswap"
+labelroot="luksroot"
+labelswap="luksswap"
 labelboot="boot"
 partroot="/dev/disk/by-partlabel/$labelroot"
 partswap="/dev/disk/by-partlabel/$labelswap"
 partboot="/dev/disk/by-partlabel/$labelboot"
-maproot="crypt-root"
-mapswap="crypt-swap"
+maproot="croot"
+mapswap="cswap"
 mountpoint="/mnt"
 
 swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
@@ -124,8 +123,8 @@ arch_chroot() {
 echo "## updating locale"
 sed -i -e "s/#$locale/$locale/" $mountpoint/etc/locale.gen
 arch_chroot "locale-gen"
-echo LANG=$lang > $mountpoint/etc/locale.conf
-arch_chroot "export LANG=$lang"
+echo LANG=$locale > $mountpoint/etc/locale.conf
+arch_chroot "export LANG=$locale"
 
 echo "## adding encrypt hook"
 sed -i -e "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
@@ -186,6 +185,7 @@ arch_chroot "hwclock -w"
 arch_chroot "systemctl enable ntpd.service"
 
 echo "## unmounting and rebooting"
+read -p "Press [Enter] key to continue"
 umount -l $mountpoint/boot
 umount -l $mountpoint
 cryptsetup luksClose $maproot
