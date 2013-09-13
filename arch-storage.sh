@@ -13,6 +13,9 @@ rm -rf ~/.PlayOnLinux
 ln -s /mnt/storage/games/PlayOnLinux ~/.PlayOnLinux
  
 ln -s /mnt/storage/data/VirtualBox ~/.VirtualBox
+
+ln -s /mnt/storage/games/winetricks/ ~/.cache/winetricks
+ln -s /mnt/storage/games/.wine/ ~/.wine
  
 pacman -S autofs
 mkdir /media/fubox

@@ -12,7 +12,8 @@ pacman -Syy
  
 #unset XMODIFIERS && export SDL_AUDIODRIVER=alsa && steam
  
-pacman -S lib32-alsa-lib wine winetricks wine-mono wine_gecko
+pacman -S wine winetricks wine-mono wine_gecko
+pacman -S alsa-lib alsa-plugins lib32-alsa-lib lib32-alsa-plugins lib32-mpg123 libpulse mpg123 lib32-libpulse lib32-openal
  
 #winetricks videomemorysize=2048 3072?
 WINEARCH=win32 winecfg
