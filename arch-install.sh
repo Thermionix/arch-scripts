@@ -186,6 +186,7 @@ arch_chroot "hwclock -w"
 arch_chroot "systemctl enable ntpd.service"
 
 echo "## unmounting and rebooting"
+read -p "Press [Enter] key to continue"
 umount -l $mountpoint/boot
 umount -l $mountpoint
 cryptsetup luksClose $maproot
