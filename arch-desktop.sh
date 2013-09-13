@@ -10,7 +10,7 @@ sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
 #pacman -S mate mate-extras
 #echo "exec mate-session" > ~/.xinitrc
  
-sudo pacman -S firefox vlc p7zip clementine gstreamer0.10-plugins flashplugin
+sudo pacman -S firefox vlc p7zip unrar zip clementine gstreamer0.10-plugins flashplugin
  
 sudo pacman -S openssh ntfsprogs rsync
  
