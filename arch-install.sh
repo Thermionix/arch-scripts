@@ -5,7 +5,6 @@
 # ip route add default via <gw-ip>
 
 echo "## defining variables for installation"
-read -e -p "Set lang: " -i "en_AU.UTF-8" lang
 read -e -p "Set locale: " -i "en_AU.UTF-8" locale
 read -e -p "Set keyboard: " -i "us" keyboard
 read -e -p "Set zone: " -i "Australia" zone
@@ -16,7 +15,7 @@ read -e -p "Set username: " -i "thermionix" username
 
 echo "## updating locale"
 loadkeys $keyboard
-export LANG=$lang
+export LANG=$locale
 sed -i -e "s/#$locale/$locale/" /etc/locale.gen
 locale-gen
 
@@ -124,8 +123,8 @@ arch_chroot() {
 echo "## updating locale"
 sed -i -e "s/#$locale/$locale/" $mountpoint/etc/locale.gen
 arch_chroot "locale-gen"
-echo LANG=$lang > $mountpoint/etc/locale.conf
-arch_chroot "export LANG=$lang"
+echo LANG=$locale > $mountpoint/etc/locale.conf
+arch_chroot "export LANG=$locale"
 
 echo "## adding encrypt hook"
 sed -i -e "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
