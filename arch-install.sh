@@ -5,7 +5,7 @@
 # ip route add default via <gw-ip>
 
 echo "## defining variables for installation"
-read -e -p "Set lang: " -i "en_AU-UTF-8" lang
+read -e -p "Set lang: " -i "en_AU.UTF-8" lang
 read -e -p "Set locale: " -i "en_AU.UTF-8" locale
 read -e -p "Set keyboard: " -i "us" keyboard
 read -e -p "Set zone: " -i "Australia" zone
