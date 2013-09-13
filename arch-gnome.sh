@@ -1,7 +1,7 @@
 #!/bin/bash
  
-pacman -S gnome gnome-flashback-session gnome-applets
-pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller
+sudo pacman -S gnome gnome-flashback-session gnome-applets
+sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller
 # remove empathy epiphany
 #echo "exec gnome-session --session=gnome-classic" > ~/.xinitrc
 echo "exec gnome-session --session=gnome-flashback" > ~/.xinitrc
