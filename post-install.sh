@@ -30,47 +30,66 @@ install_xorg() {
 install_video_drivers() {
 	echo "## Installing Video Drivers"
 
-	#case vesa
-	#pacman -S xf86-video-vesa
-	
-	#case virtualbox
-	# virtualbox
+	driverlist=("vesa" "virtualbox" "intel" "catalyst")
+	select OPT in "${driverlist[@]}"; do
+	case "$REPLY" in
+    	1)
+			echo "## installing vesa"
+			sudo pacman -S xf86-video-vesa
+		;;
+    	2)
+			echo "## installing virtualbox"
+			sudo pacman -S virtualbox-guest-utils
+		;;
+    	3)
+			echo "## installing intel"
+			sudo pacman -S xf86-video-intel
+		;;
+    	4)
+			echo "## installing catalyst"
 
-	#case intel
-	#intel
+			CATALYST_CHECK=`grep "\[catalyst\]" /etc/pacman.conf`
+			if [ $? -ne 0 ]; then
+				echo -e '\n[catalyst]\nInclude = /etc/pacman.d/catalyst' | sudo tee --append /etc/pacman.conf
+			fi
+			 
+			echo -e "Server = http://catalyst.wirephire.com/repo/catalyst/\$arch\nServer = http://70.239.162.206/catalyst-mirror/repo/catalyst/\$arch\nServer = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/\$arch" | sudo tee /etc/pacman.d/catalyst
+			 
+			sudo pacman-key --keyserver pgp.mit.edu --recv-keys 0xabed422d653c3094
+			sudo pacman-key --lsign-key 0xabed422d653c3094
+			 
+			sudo pacman -Syy
+			 
+			sudo pacman -S --needed base-devel linux-headers mesa-demos qt4
+			sudo pacman -S libtxc_dxtn lib32-libtxc_dxtn
+			 
+			sudo pacman -S catalyst-hook catalyst-utils
 
-	#case catalyst
-	CATALYST_CHECK=`grep "\[catalyst\]" /etc/pacman.conf`
-	if [ $? -ne 0 ]; then
-		echo -e '\n[catalyst]\nInclude = /etc/pacman.d/catalyst' | sudo tee --append /etc/pacman.conf
-	fi
-	 
-	echo -e "Server = http://catalyst.wirephire.com/repo/catalyst/\$arch\nServer = http://70.239.162.206/catalyst-mirror/repo/catalyst/\$arch\nServer = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/\$arch" | sudo tee /etc/pacman.d/catalyst
-	 
-	sudo pacman-key --keyserver pgp.mit.edu --recv-keys 0xabed422d653c3094
-	sudo pacman-key --lsign-key 0xabed422d653c3094
-	 
-	sudo pacman -Syy
-	 
-	sudo pacman -S base-devel linux-headers mesa-demos qt4
-	sudo pacman -S libtxc_dxtn lib32-libtxc_dxtn
-	 
-	sudo pacman -S catalyst-hook catalyst-utils
-	 
-	sudo sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$# nomodeset\"#" /etc/default/grub
-	 
-	echo "blacklist radeon" | sudo tee /etc/modprobe.d/blacklist-radeon.conf
-	echo -e "blacklist snd_hda_intel\nblacklist snd_hda_codec_hdmi" | sudo tee /etc/modprobe.d/blacklist-hdmi.conf
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S lib32-catalyst-utils
+			fi
+			 
+			sudo sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$# nomodeset\"#" /etc/default/grub
+			 
+			echo "blacklist radeon" | sudo tee /etc/modprobe.d/blacklist-radeon.conf
+			echo -e "blacklist snd_hda_intel\nblacklist snd_hda_codec_hdmi" | sudo tee /etc/modprobe.d/blacklist-hdmi.conf
 
-	sudo grub-mkconfig -o /boot/grub/grub.cfg
-	 
-	sudo systemctl enable catalyst-hook
-	sudo systemctl start catalyst-hook
-	 
-	# sudo reboot
-	# sudo aticonfig --initial
-	# sudo aticonfig --initial=dual-head --screen-layout=right
-	# sudo aticonfig --tls=off
+			sudo grub-mkconfig -o /boot/grub/grub.cfg
+			 
+			sudo systemctl enable catalyst-hook
+			sudo systemctl start catalyst-hook
+			 
+			# sudo reboot
+			# sudo aticonfig --initial
+			# sudo aticonfig --initial=dual-head --screen-layout=right
+			# sudo aticonfig --tls=off
+		;;
+		*)
+	        invalid_option
+        ;;
+	esac
+	[[ -n $OPT ]] && break
+	done
 }
 
 install_desktop_environment() {
@@ -99,20 +118,25 @@ install_fonts() {
 	echo "## Installing Fonts"
 	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
-	packer -S ttf-ms-fonts
+	read -p "Install ttf-ms-fonts? [y/N]: " OPTION
+		[[ $OPTION == y ]] && packer -S ttf-ms-fonts
 }
 
 install_desktop_applications() {
 	echo "## Installing Desktop Applications"
-	sudo pacman -S firefox vlc p7zip unrar zip clementine gstreamer0.10-plugins flashplugin
-	 
-	sudo pacman -S openssh ntfsprogs rsync
-	 
-	sudo pacman -S mumble steam
 
 	if [ `grep "complete -cf sudo" ~/.bashrc` -ne 0 ]; then 
 		echo "complete -cf sudo" >> ~/.bashrc
 	fi
+
+	sudo pacman -S firefox vlc clementine gstreamer0.10-plugins flashplugin
+	 
+	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip
+	 
+	sudo pacman -S mumble
+
+	read -p "Install Steam? [y/N]: " OPTION
+		[[ $OPTION == y ]] && sudo pacman -S steam
 }
 
 install_wine() {
@@ -220,9 +244,13 @@ read_input_options() {
 	OPTIONS=("${packages[@]}")
 }
 
+invalid_option() {
+    echo "Invalid option. Try another one."
+}
+
 finish(){
 	read -p "Reboot your system [y/N]: " OPTION
-	[[ $OPTION == y ]] && reboot
+		[[ $OPTION == y ]] && reboot
 	exit 0
 }
 
