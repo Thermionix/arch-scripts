@@ -185,7 +185,7 @@ install_gsettings() {
 
 list_aur_pkgs() {
 	echo "## Listing packages from AUR"
-	pacman -Qm | awk '{print $1}' > less
+	sudo pacman -Qm | awk '{print $1}' | less
 }
 
 
