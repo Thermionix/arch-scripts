@@ -1,7 +1,6 @@
 #!/bin/bash
 
-	echo "Do not run as root"
-	echo "Speed up Arch setup"
+echo "###### Do not run as root"
 
 install_aur_helper() {
 	echo "## Installing AUR Helper"
