@@ -125,15 +125,23 @@ install_fonts() {
 install_desktop_applications() {
 	echo "## Installing Desktop Applications"
 
-	if [ `grep "complete -cf sudo" ~/.bashrc` -ne 0 ]; then 
+	if ! grep "complete -cf sudo" ~/.bashrc ; then 
 		echo "complete -cf sudo" >> ~/.bashrc
 	fi
-
+	
+	if ! grep "bash_aliases" ~/.bashrc ; then 
+		echo -e "if [ -f ~/.bash_aliases ]; then\n. ~/.bash_aliases\nfi" >> ~/.bashrc
+	fi
+	
+	if ! grep "yolo" ~/.bash_aliases ; then 
+		echo "alias yolo='packer -Syu'" >> ~/.bash_aliases
+	fi
+	
 	sudo pacman -S firefox vlc clementine gstreamer0.10-plugins flashplugin
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip
 	 
-	sudo pacman -S mumble
+	sudo pacman -S mumble gimp
 
 	read -p "Install Steam? [y/N]: " OPTION
 		[[ $OPTION == y ]] && sudo pacman -S steam
