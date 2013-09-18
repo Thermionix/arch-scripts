@@ -172,9 +172,7 @@ install_grub_holdshift() {
 
 install_x_autostart() {
 	echo "## Installing X Autostart"
-	if [ `grep "exec startx" ~/.bash_profile` -ne 0 ]; then 
-		echo "## the next command will add startx after login to .bash_profile"
-		read -p "Press [Enter] key to continue"
+	if ! grep -q "exec startx" ~/.bash_profile ; then 
 		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
 		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
 	fi
