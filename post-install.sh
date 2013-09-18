@@ -6,7 +6,7 @@
 install_aur_helper() {
 	echo "## Installing AUR Helper"
 	sudo pacman -S --needed wget base-devel
-	if [ `grep "EDITOR" ~/.bashrc` -ne 0 ]; then 
+	if ! grep "EDITOR" ~/.bashrc ; then 
 		echo "export EDITOR=\"nano\"" >> ~/.bashrc
 	fi
 	 
@@ -48,8 +48,7 @@ install_video_drivers() {
     	4)
 			echo "## installing catalyst"
 
-			CATALYST_CHECK=`grep "\[catalyst\]" /etc/pacman.conf`
-			if [ $? -ne 0 ]; then
+			if ! grep "\[catalyst\]" /etc/pacman.conf ; then
 				echo -e '\n[catalyst]\nInclude = /etc/pacman.d/catalyst' | sudo tee --append /etc/pacman.conf
 			fi
 			 
