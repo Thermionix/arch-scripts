@@ -5,7 +5,7 @@ echo "###### Do not run as root"
 install_aur_helper() {
 	echo "## Installing AUR Helper"
 	sudo pacman -S --needed wget base-devel
-	if ! grep "EDITOR" ~/.bashrc ; then 
+	if ! grep -q "EDITOR" ~/.bashrc ; then 
 		echo "export EDITOR=\"nano\"" >> ~/.bashrc
 	fi
 	 
@@ -47,7 +47,7 @@ install_video_drivers() {
     	4)
 			echo "## installing catalyst"
 
-			if ! grep "\[catalyst\]" /etc/pacman.conf ; then
+			if ! grep -q "\[catalyst\]" /etc/pacman.conf ; then
 				echo -e '\n[catalyst]\nInclude = /etc/pacman.d/catalyst' | sudo tee --append /etc/pacman.conf
 			fi
 			 
@@ -123,15 +123,15 @@ install_fonts() {
 install_desktop_applications() {
 	echo "## Installing Desktop Applications"
 
-	if ! grep "complete -cf sudo" ~/.bashrc ; then 
+	if ! grep -q "complete -cf sudo" ~/.bashrc ; then 
 		echo "complete -cf sudo" >> ~/.bashrc
 	fi
 	
-	if ! grep "bash_aliases" ~/.bashrc ; then 
+	if ! grep -q "bash_aliases" ~/.bashrc ; then 
 		echo -e "if [ -f ~/.bash_aliases ]; then\n. ~/.bash_aliases\nfi" >> ~/.bashrc
 	fi
 	
-	if ! grep "yolo" ~/.bash_aliases ; then 
+	if ! grep -q "yolo" ~/.bash_aliases ; then 
 		echo "alias yolo='packer -Syu'" >> ~/.bash_aliases
 	fi
 	
@@ -149,7 +149,7 @@ install_wine() {
 	echo "## Installing Wine"
 	if [[ `uname -m` == x86_64 ]]; then
 		echo "## x86_64 detected, adding multilib repository"
-			if [[ -z `grep -n "\[multilib\]" /etc/pacman.conf | cut -f1 -d:` ]]; then
+		if ! grep -q "\[multilib\]" /etc/pacman.conf ; then
 			echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
 		else
 			sudo sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
@@ -169,7 +169,7 @@ install_grub_holdshift() {
 
 	packer -S grub-holdshift
 	 
-	if [[ -z `grep -n "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub | cut -f1 -d:` ]]; then
+	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
 		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
 	fi
 	 
