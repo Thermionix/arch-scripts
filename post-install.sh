@@ -111,7 +111,7 @@ install_desktop_environment() {
 
 	#if case = gnome
 	sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-flashback-session gnome-applets
-	sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller
+	sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller dconf-editor
 	echo "exec gnome-session --session=gnome-flashback" > ~/.xinitrc
 }
 
@@ -149,7 +149,7 @@ install_desktop_applications() {
 	
 	sudo pacman -S firefox vlc clementine gstreamer0.10-plugins flashplugin
 	 
-	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip
+	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted
 	 
 	sudo pacman -S mumble gimp
 
@@ -165,6 +165,10 @@ install_wine() {
 	 
 	#winetricks videomemorysize=2048 3072?
 	WINEARCH=win32 winecfg
+
+	echo "export WINEDLLOVERRIDES='winemenubuilder.exe=d'" >> ~/.bashrc
+	sed -i -e "/^text/d" -e "/^image/d" ~/.local/share/applications/mimeinfo.cache
+	rm ~/.local/share/applications/wine-extension*
 }
 
 install_grub_holdshift() {
@@ -206,7 +210,16 @@ install_gsettings() {
 	gsettings set org.gnome.nautilus.preferences sort-directories-first 'true'
 	gsettings set org.gtk.Settings.FileChooser show-hidden 'true'
 	gsettings set org.gnome.desktop.background show-desktop-icons 'true'
-	 
+
+	gsettings set org.gnome.gedit.preferences.editor create-backup-copy 'false'
+	gsettings set org.gnome.gedit.preferences.editor wrap-mode 'none'
+	gsettings set org.gnome.gedit.preferences.editor display-line-numbers 'true'
+	gsettings set org.gnome.gedit.preferences.editor bracket-matching 'true'
+
+	mkdir -p ~/.config/gtk-3.0
+	echo -e "[Settings]\ngtk-recent-files-max-age=0\ngtk-recent-files-limit=0" > ~/.config/gtk-3.0/settings.ini
+	rm ~/.local/share/recently-used.xbel
+
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \"['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']\"
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name \"terminal\"
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command \"gnome-terminal\"
