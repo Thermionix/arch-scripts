@@ -217,7 +217,9 @@ install_gsettings() {
 	gsettings set org.gnome.gedit.preferences.editor bracket-matching 'true'
 
 	mkdir -p ~/.config/gtk-3.0
-	echo -e "[Settings]\ngtk-recent-files-max-age=0\ngtk-recent-files-limit=0" > ~/.config/gtk-3.0/settings.ini
+	if [ ! -f ~/.config/gtk-3.0/settings.ini ] ; then
+		echo -e "[Settings]\ngtk-recent-files-max-age=0\ngtk-recent-files-limit=0" > ~/.config/gtk-3.0/settings.ini
+	fi
 	rm ~/.local/share/recently-used.xbel
 
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \"['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']\"
