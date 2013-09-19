@@ -21,6 +21,18 @@ install_aur_helper() {
 	rm -rf packerbuild
 }
 
+install_multilib_repo() {
+	if [[ `uname -m` == x86_64 ]]; then
+		echo "## x86_64 detected, adding multilib repository"
+		if ! grep -q "\[multilib\]" /etc/pacman.conf ; then
+			echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
+		else
+			sudo sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
+		fi
+	fi
+	sudo pacman -Syy
+}
+
 install_xorg() {
 	echo "## Installing Xorg"
 	sudo pacman -S xorg-server xorg-server-utils xorg-xinit mesa
@@ -147,15 +159,6 @@ install_desktop_applications() {
 
 install_wine() {
 	echo "## Installing Wine"
-	if [[ `uname -m` == x86_64 ]]; then
-		echo "## x86_64 detected, adding multilib repository"
-		if ! grep -q "\[multilib\]" /etc/pacman.conf ; then
-			echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
-		else
-			sudo sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
-		fi
-	fi
-	sudo pacman -Syy
 
 	sudo pacman -S wine winetricks wine-mono wine_gecko
 	sudo pacman -S alsa-lib alsa-plugins lib32-alsa-lib lib32-alsa-plugins lib32-mpg123 libpulse mpg123 lib32-libpulse lib32-openal
@@ -197,7 +200,7 @@ install_printing() {
 }
 
 install_gsettings() {
-	echo "## Improving gnome environment"
+	echo "## Toggle some settings in gnome environment"
 	echo "# Only works after running startx!"
 	gsettings set org.gnome.nautilus.preferences default-folder-viewer 'list-view'
 	gsettings set org.gnome.nautilus.preferences sort-directories-first 'true'
@@ -262,19 +265,20 @@ finish(){
 while true
 do
 	echo " 1) $(mainmenu_item "${checklist[1]}" "AUR Helper")"
-	echo " 2) $(mainmenu_item "${checklist[2]}" "Xorg")"
-	echo " 3) $(mainmenu_item "${checklist[3]}" "Video Drivers")"
-	echo " 4) $(mainmenu_item "${checklist[4]}" "Desktop Environment")"
-	echo " 5) $(mainmenu_item "${checklist[5]}" "Network Manager")"
-	echo " 6) $(mainmenu_item "${checklist[6]}" "Fonts")"
-	echo " 7) $(mainmenu_item "${checklist[7]}" "Desktop Applications")"
-	echo " 8) $(mainmenu_item "${checklist[8]}" "Wine")"
-	echo " 9) $(mainmenu_item "${checklist[9]}" "grub-holdshift")"
-	echo " 10) $(mainmenu_item "${checklist[10]}" "Printing")"
-	echo " 11) $(mainmenu_item "${checklist[11]}" "Pulseaudio")"
-	echo " 12) $(mainmenu_item "${checklist[12]}" "Enable X autostart")"
-	echo " 13) $(mainmenu_item "${checklist[13]}" "Gsettings")"
-	echo " 14) $(mainmenu_item "${checklist[14]}" "List AUR PKGs")"
+	echo " 2) $(mainmenu_item "${checklist[2]}" "enable multilib repository")"
+	echo " 3) $(mainmenu_item "${checklist[3]}" "Xorg")"
+	echo " 4) $(mainmenu_item "${checklist[4]}" "Video Drivers")"
+	echo " 5) $(mainmenu_item "${checklist[5]}" "Desktop Environment")"
+	echo " 6) $(mainmenu_item "${checklist[6]}" "Network Manager")"
+	echo " 7) $(mainmenu_item "${checklist[7]}" "Fonts")"
+	echo " 8) $(mainmenu_item "${checklist[8]}" "Desktop Applications")"
+	echo " 9) $(mainmenu_item "${checklist[9]}" "Wine")"
+	echo " 10) $(mainmenu_item "${checklist[10]}" "grub-holdshift")"
+	echo " 11) $(mainmenu_item "${checklist[11]}" "Printing")"
+	echo " 12) $(mainmenu_item "${checklist[12]}" "Pulseaudio")"
+	echo " 13) $(mainmenu_item "${checklist[13]}" "Enable X autostart")"
+	echo " 14) $(mainmenu_item "${checklist[14]}" "Gsettings")"
+	echo " 15) $(mainmenu_item "${checklist[15]}" "List AUR PKGs")"
 	echo ""
 	echo " q) Quit"
 	echo ""
@@ -287,56 +291,60 @@ do
 			checklist[1]=1
 		;;
 		2)
-			install_xorg
+			install_multilib_repo
 			checklist[2]=1
 		;;
 		3)
-			install_video_drivers
+			install_xorg
 			checklist[3]=1
 		;;
 		4)
-			install_desktop_environment
+			install_video_drivers
 			checklist[4]=1
 		;;
 		5)
-			install_network_manager
+			install_desktop_environment
 			checklist[5]=1
 		;;
 		6)
-			install_fonts
+			install_network_manager
 			checklist[6]=1
 		;;
 		7)
-			install_desktop_applications
+			install_fonts
 			checklist[7]=1
 		;;
 		8)
-			install_wine
+			install_desktop_applications
 			checklist[8]=1
 		;;
 		9)
-			install_grub_holdshift
+			install_wine
 			checklist[9]=1
 		;;
 		10)
-			install_printing
+			install_grub_holdshift
 			checklist[10]=1
 		;;
 		11)
-			install_pulse_audio
+			install_printing
 			checklist[11]=1
 		;;
 		12)
-			install_x_autostart
+			install_pulse_audio
 			checklist[12]=1
 		;;
 		13)
-			install_gsettings
+			install_x_autostart
 			checklist[13]=1
 		;;
 		14)
-			list_aur_pkgs
+			install_gsettings
 			checklist[14]=1
+		;;
+		15)
+			list_aur_pkgs
+			checklist[15]=1
 		;;
 
 
