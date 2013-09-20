@@ -153,8 +153,14 @@ install_desktop_applications() {
 	 
 	sudo pacman -S mumble gimp
 
-	read -p "Install Steam? [y/N]: " OPTION
-		[[ $OPTION == y ]] && sudo pacman -S steam
+	read -p "Install Gaming? [y/N]: " OPTION
+		[[ $OPTION == y ]] && install_gaming_applications
+}
+
+install_gaming_applications() {
+	sudo pacman -S steam
+	packer -S sdl-nokeyboardgrab
+	#echo "options usbhid mousepoll=2" | sudo tee /etc/modprobe.d/mousepolling.conf
 }
 
 install_wine() {
