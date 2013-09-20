@@ -211,10 +211,13 @@ install_gsettings() {
 	gsettings set org.gtk.Settings.FileChooser show-hidden 'true'
 	gsettings set org.gnome.desktop.background show-desktop-icons 'true'
 
-	gsettings set org.gnome.gedit.preferences.editor create-backup-copy 'false'
-	gsettings set org.gnome.gedit.preferences.editor wrap-mode 'none'
-	gsettings set org.gnome.gedit.preferences.editor display-line-numbers 'true'
-	gsettings set org.gnome.gedit.preferences.editor bracket-matching 'true'
+	if gsettings list-schemas | grep -q gedit ; then
+		echo "# updating gedit settings"
+		gsettings set org.gnome.gedit.preferences.editor create-backup-copy 'false'
+		gsettings set org.gnome.gedit.preferences.editor wrap-mode 'none'
+		gsettings set org.gnome.gedit.preferences.editor display-line-numbers 'true'
+		gsettings set org.gnome.gedit.preferences.editor bracket-matching 'true'
+	fi
 
 	mkdir -p ~/.config/gtk-3.0
 	if [ ! -f ~/.config/gtk-3.0/settings.ini ] ; then
