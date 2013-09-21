@@ -132,6 +132,11 @@ install_fonts() {
 		[[ $OPTION == y ]] && packer -S ttf-ms-fonts
 }
 
+install_scanning() {
+	sudo pacman -S sane
+	sudo usermod -a -G scanner `whoami`
+}
+
 install_desktop_applications() {
 	echo "## Installing Desktop Applications"
 
