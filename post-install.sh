@@ -133,7 +133,7 @@ install_fonts() {
 }
 
 install_scanning() {
-	sudo pacman -S sane
+	sudo pacman -S sane xsane
 	sudo usermod -a -G scanner `whoami`
 }
 
