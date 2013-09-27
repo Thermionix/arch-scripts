@@ -1,7 +1,11 @@
 #!/bin/bash
 
-echo "###### Do not run as root"
 command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
+
+if ! [ $(id -u) = 0 ]; then
+	echo "Don't run as root!"
+	exit 1
+fi
 
 install_aur_helper() {
 	echo "## Installing AUR Helper"
@@ -40,12 +44,13 @@ install_xorg() {
 }
 
 install_video_drivers() {
-	echo "## Installing Video Drivers"
-
-	driverlist=("vesa" "virtualbox" "intel" "catalyst")
-	select OPT in "${driverlist[@]}"; do
-	case "$REPLY" in
-    	1)
+	case $(whiptail --menu "Choose a video driver" 20 60 12 \
+	"1" "vesa" \
+	"2" "virtualbox" \
+	"3" "intel" \
+	"4" "catalyst" \
+	3>&1 1>&2 2>&3) in
+		1)
 			echo "## installing vesa"
 			sudo pacman -S xf86-video-vesa
 		;;
@@ -95,12 +100,7 @@ install_video_drivers() {
 			# sudo aticonfig --initial=dual-head --screen-layout=right
 			# sudo aticonfig --tls=off
 		;;
-		*)
-	        invalid_option
-        ;;
-	esac
-	[[ -n $OPT ]] && break
-	done
+	esac	
 }
 
 install_desktop_environment() {
@@ -159,11 +159,10 @@ install_desktop_applications() {
 	 
 	sudo pacman -S mumble gimp
 
-	read -p "Install Gaming? [y/N]: " OPTION
-		[[ $OPTION == y ]] && install_gaming_applications
+	sudo pacman -S gnome-packagekit
 }
 
-install_gaming_applications() {
+install_steam_and_tweaks() {
 	sudo pacman -S steam
 	packer -S sdl-nokeyboardgrab
 	#echo "options usbhid mousepoll=2" | sudo tee /etc/modprobe.d/mousepolling.conf
@@ -266,8 +265,9 @@ options=(
 13 "Pulseaudio" off
 14 "Enable X autostart" off
 15 "Gsettings" off
-16 "List AUR PKGs" off
-17 "reboot" off
+16 "Steam and gaming tweaks" off
+17 "List AUR PKGs" off
+18 "reboot" off
 )
 choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 
@@ -320,9 +320,12 @@ do
 			install_gsettings
 		;;
 		16)
-			list_aur_pkgs
+			install_steam_and_tweaks
 		;;
 		17)
+			list_aur_pkgs
+		;;
+		18)
 			reboot
 		;;
     esac
