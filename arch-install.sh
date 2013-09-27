@@ -18,11 +18,12 @@ enable_ssh() {
 	systemctl start sshd 
 	echo "## set passwd for login with ssh root@hostname"
 	passwd
-	ip addr
+	ip addr | grep "inet"
 }
 
 user_variables() {
 	echo "## defining variables for installation"
+	# cat /etc/locale.gen | grep -oP "^#\K[a-zA-Z0-9@._-]+"
 	locale=$($dialog --nocancel --inputbox "Set locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
 	keyboard=$($dialog --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
 	zone=$($dialog --nocancel --inputbox "Set zone:" 10 40 "Australia" 3>&1 1>&2 2>&3)
@@ -46,7 +47,7 @@ partition_disk() {
 
 	HAS_TRIM=0
 	if [ -n "$(hdparm -I ${DSK} 2>&1 | grep 'TRIM supported')" ]; then
-	  HAS_TRIM=1
+		HAS_TRIM=1
 	fi
 
 	labelroot="luksroot"
@@ -107,14 +108,14 @@ update_mirrorlist() {
 	curl -so ${tmpfile} ${url}
 	sed -i 's/^#Server/Server/g' ${tmpfile}
 	if [[ -s ${tmpfile} ]]; then
-	  echo "## rotating the new list into place"
-	  mv -i /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
-	  mv -i ${tmpfile} /etc/pacman.d/mirrorlist
+		echo "## rotating the new list into place"
+		mv -i /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
+		mv -i ${tmpfile} /etc/pacman.d/mirrorlist
 	else
-	  echo "## could not download list, ranking original mirrorlist"
-	  cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-	  sed '/^#\S/ s|#||' -i /etc/pacman.d/mirrorlist.backup
-	  rankmirrors --verbose -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
+		echo "## could not download list, ranking original mirrorlist"
+		cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+		sed '/^#\S/ s|#||' -i /etc/pacman.d/mirrorlist.backup
+		rankmirrors --verbose -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
 	fi
 	chmod +r /etc/pacman.d/mirrorlist
 	nano /etc/pacman.d/mirrorlist
@@ -135,10 +136,10 @@ genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
 echo "$mapswap $partswap /dev/urandom swap,cipher=aes-cbc-essiv:sha256,size=256" >> $mountpoint/etc/crypttab
 echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 if [ ${HAS_TRIM} -eq 1 ]; then
-  echo "## adding trim support"
-  sed -i -e 's/rw,/discard,rw,/' $mountpoint/etc/fstab
-  sed -i -e 's/defaults/defaults,discard/' $mountpoint/etc/fstab
-  sed -i -e 's/swap,/swap,discard,/' $mountpoint/etc/crypttab
+	echo "## adding trim support"
+	sed -i -e 's/rw,/discard,rw,/' $mountpoint/etc/fstab
+	sed -i -e 's/defaults/defaults,discard/' $mountpoint/etc/fstab
+	sed -i -e 's/swap,/swap,discard,/' $mountpoint/etc/crypttab
 fi
 nano $mountpoint/etc/fstab
 nano $mountpoint/etc/crypttab
@@ -180,9 +181,7 @@ sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/defaul
 sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub 
 nano $mountpoint/etc/default/grub
 arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
-echo "## check cryptdevice in $mountpoint/boot/grub/grub.cfg"
-cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"
-read -p "Press [Enter] key to continue"
+$dialog --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
 
 echo "## adding user: $username"
 pacstrap -i $mountpoint sudo
@@ -193,27 +192,34 @@ sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 #echo "## disabling root login"
 #arch_chroot "passwd -l root"
 
-echo "## enabling autologin for user: $username"
-mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
-pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
-echo "[Service]" > autologin.conf
-echo "ExecStart=" >> autologin.conf
-echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
-popd
+if $dialog --yesno "enable autologin for user: $username?" 8 40 ; then
+	echo "## enabling autologin for user: $username"
+	mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
+	pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
+	echo "[Service]" > autologin.conf
+	echo "ExecStart=" >> autologin.conf
+	echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
+	popd
+fi
 
-echo "## enabling dhcpcd"
-arch_chroot "systemctl enable dhcpcd.service"
-## handle wifi?
+if $dialog --yesno "enable dhcpcd?" 8 40 ; then
+	echo "## enabling dhcpcd"
+	arch_chroot "systemctl enable dhcpcd.service"
+	## handle wifi?
+fi
 
-echo "## enabling network time"
-pacstrap -i $mountpoint ntp
-arch_chroot "ntpd -q"
-arch_chroot "hwclock -w"
-arch_chroot "systemctl enable ntpd.service"
+if $dialog --yesno "enable network time?" 8 40 ; then
+	echo "## enabling network time"
+	pacstrap -i $mountpoint ntp
+	arch_chroot "ntpd -q"
+	arch_chroot "hwclock -w"
+	arch_chroot "systemctl enable ntpd.service"
+fi
 
-echo "## unmounting and rebooting"
-read -p "Press [Enter] key to continue"
-umount -l $mountpoint/boot
-umount -l $mountpoint
-cryptsetup luksClose $maproot
-reboot
+if $dialog --yesno "Reboot now?" 8 40 ; then
+	echo "## unmounting and rebooting"
+	umount -l $mountpoint/boot
+	umount -l $mountpoint
+	cryptsetup luksClose $maproot
+	reboot
+fi
