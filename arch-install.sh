@@ -1,104 +1,131 @@
 #!/bin/bash
 
-## enable ssh access:
-# systemctl start sshd && passwd && ip addr
-# ip route add default via <gw-ip>
+check_dialog() {
+	read dialog <<< "$(which $dialog dialog 2> /dev/null)"
+	[[ "$dialog" ]] || {
+		echo 'neither $dialog nor dialog found' >&2
+		exit 1
+	}
+}
 
-echo "## defining variables for installation"
-read -e -p "Set locale: " -i "en_AU.UTF-8" locale
-read -e -p "Set keyboard: " -i "us" keyboard
-read -e -p "Set zone: " -i "Australia" zone
-read -e -p "Set subzone: " -i "Melbourne" subzone
-read -e -p "Set mirrorlist country code: " -i "AU" country
-read -e -p "Set hostname: " -i "arch-laptop" hostname
-read -e -p "Set username: " -i "thermionix" username
+net_connectivity() {
+	echo "## checking internet connectivity"
+	ping -c 2 www.google.com
+	#ip route add default via <gw-ip>
+}
 
-echo "## updating locale"
-loadkeys $keyboard
-export LANG=$locale
-sed -i -e "s/#$locale/$locale/" /etc/locale.gen
-locale-gen
+enable_ssh() {
+	systemctl start sshd 
+	echo "## set passwd for login with ssh root@hostname"
+	passwd
+	ip addr
+}
 
-echo "## checking internet connectivity"
-ping -c 2 www.google.com
-read -p "Press [Enter] key to continue"
+user_variables() {
+	echo "## defining variables for installation"
+	locale=$($dialog --nocancel --inputbox "Set locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
+	keyboard=$($dialog --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
+	zone=$($dialog --nocancel --inputbox "Set zone:" 10 40 "Australia" 3>&1 1>&2 2>&3)
+	subzone=$($dialog --nocancel --inputbox "Set subzone:" 10 40 "Melbourne" 3>&1 1>&2 2>&3)
+	country=$($dialog --nocancel --inputbox "Set mirrorlist country code:" 10 40 "AU" 3>&1 1>&2 2>&3)
+	hostname=$($dialog --nocancel --inputbox "Set hostname:" 10 40 "arch-laptop" 3>&1 1>&2 2>&3)
+	username=$($dialog --nocancel --inputbox "Set username:" 10 40 "thermionix" 3>&1 1>&2 2>&3)
+}
 
-echo "## listing available disks"
-parted --list | egrep "^Disk /"
-read -e -p "Set disk to install to: " -i "sda" DSK
+update_locale() {
+	echo "## updating locale"
+	loadkeys $keyboard
+	export LANG=$locale
+	sed -i -e "s/#$locale/$locale/" /etc/locale.gen
+	locale-gen
+}
 
-HAS_TRIM=0
-if [ -n "$(hdparm -I /dev/${DSK} 2>&1 | grep 'TRIM supported')" ]; then
-  HAS_TRIM=1
-fi
+partition_disk() {
+	disks=`parted --list | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
+	DSK=$($dialog --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
-labelroot="luksroot"
-labelswap="luksswap"
-labelboot="boot"
-partroot="/dev/disk/by-partlabel/$labelroot"
-partswap="/dev/disk/by-partlabel/$labelswap"
-partboot="/dev/disk/by-partlabel/$labelboot"
-maproot="croot"
-mapswap="cswap"
-mountpoint="/mnt"
+	HAS_TRIM=0
+	if [ -n "$(hdparm -I ${DSK} 2>&1 | grep 'TRIM supported')" ]; then
+	  HAS_TRIM=1
+	fi
 
-swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
-read -e -p "Set swap partition size (calculated from meminfo): " -i "$swap_size" swap_size
-boot_end=$(( 2 + 500 ))
-swap_end=$(( $boot_end + ${swap_size} ))
+	labelroot="luksroot"
+	labelswap="luksswap"
+	labelboot="boot"
+	partroot="/dev/disk/by-partlabel/$labelroot"
+	partswap="/dev/disk/by-partlabel/$labelswap"
+	partboot="/dev/disk/by-partlabel/$labelboot"
+	maproot="croot"
+	mapswap="cswap"
+	mountpoint="/mnt"
 
-echo "## creating partition bios_grub"
-parted -s /dev/${DSK} mklabel gpt
-parted -s /dev/${DSK} -a optimal unit MB mkpart primary 1 2
-parted -s /dev/${DSK} set 1 bios_grub on
-echo "## creating partition $labelboot"
-parted -s /dev/${DSK} -a optimal unit MB mkpart primary 2 $boot_end
-parted -s /dev/${DSK} name 2 $labelboot
-echo "## creating partition $labelswap"
-parted -s /dev/${DSK} -a optimal unit MB mkpart primary $boot_end $swap_end
-parted -s /dev/${DSK} name 3 $labelswap
-echo "## creating partition $labelroot"
-parted -s /dev/${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
-parted -s /dev/${DSK} name 4 $labelroot
+	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
+	swap_size=$($dialog --nocancel --inputbox "Set swap partition size \n(default calculated from meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
+	boot_end=$(( 2 + 500 ))
+	swap_end=$(( $boot_end + ${swap_size} ))
 
-echo "## /dev/${DSK} parition layout:"
-parted -s /dev/${DSK} print
-read -p "Press [Enter] key to continue"
+	echo "## creating partition bios_grub"
+	parted -s ${DSK} mklabel gpt
+	parted -s ${DSK} -a optimal unit MB mkpart primary 1 2
+	parted -s ${DSK} set 1 bios_grub on
+	echo "## creating partition $labelboot"
+	parted -s ${DSK} -a optimal unit MB mkpart primary 2 $boot_end
+	parted -s ${DSK} name 2 $labelboot
+	echo "## creating partition $labelswap"
+	parted -s ${DSK} -a optimal unit MB mkpart primary $boot_end $swap_end
+	parted -s ${DSK} name 3 $labelswap
+	echo "## creating partition $labelroot"
+	parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
+	parted -s ${DSK} name 4 $labelroot
 
-echo "## running crypt benchmark"
-cryptsetup benchmark
-read -e -p "Set cipher: " -i "aes-xts-plain" cipher
-read -e -p "Set keysize: " -i "512" keysize
-echo "## encrypting $partroot"
-cryptsetup -c $cipher -y -s $keysize -r luksFormat $partroot
-echo "## opening $partroot"
-cryptsetup luksOpen $partroot $maproot
-echo "## mkfs /dev/mapper/$maproot"
-mkfs.ext4 /dev/mapper/$maproot
-echo "## mkfs $partboot"
-mkfs.ext4 $partboot
-echo "## mounting partitions"
-mount /dev/mapper/$maproot $mountpoint
-mkdir $mountpoint/boot
-mount $partboot $mountpoint/boot
+	whiptail --title "partition layout" --msgbox "`sudo parted -s ${DSK} print`" 20 70
+}
 
-echo "## attempting to download mirrorlist for country: ${country}"
-url="https://www.archlinux.org/mirrorlist/?country=${country}&use_mirror_status=on"
-tmpfile=$(mktemp --suffix=-mirrorlist)
-curl -so ${tmpfile} ${url}
-sed -i 's/^#Server/Server/g' ${tmpfile}
-if [[ -s ${tmpfile} ]]; then
-  echo "## rotating the new list into place"
-  mv -i /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
-  mv -i ${tmpfile} /etc/pacman.d/mirrorlist
-else
-  echo "## could not download list, ranking original mirrorlist"
-  cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-  sed '/^#\S/ s|#||' -i /etc/pacman.d/mirrorlist.backup
-  rankmirrors --verbose -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
-fi
-chmod +r /etc/pacman.d/mirrorlist
-nano /etc/pacman.d/mirrorlist
+encrypt_disk() {
+	echo "## running crypt benchmark"
+	cryptsetup benchmark
+	read -e -p "Set cipher: " -i "aes-xts-plain" cipher
+	read -e -p "Set keysize: " -i "512" keysize
+	echo "## encrypting $partroot"
+	cryptsetup -c $cipher -y -s $keysize -r luksFormat $partroot
+	echo "## opening $partroot"
+	cryptsetup luksOpen $partroot $maproot
+	echo "## mkfs /dev/mapper/$maproot"
+	mkfs.ext4 /dev/mapper/$maproot
+	echo "## mkfs $partboot"
+	mkfs.ext4 $partboot
+	echo "## mounting partitions"
+	mount /dev/mapper/$maproot $mountpoint
+	mkdir $mountpoint/boot
+	mount $partboot $mountpoint/boot
+}
+
+update_mirrorlist() {
+	echo "## attempting to download mirrorlist for country: ${country}"
+	url="https://www.archlinux.org/mirrorlist/?country=${country}&use_mirror_status=on"
+	tmpfile=$(mktemp --suffix=-mirrorlist)
+	curl -so ${tmpfile} ${url}
+	sed -i 's/^#Server/Server/g' ${tmpfile}
+	if [[ -s ${tmpfile} ]]; then
+	  echo "## rotating the new list into place"
+	  mv -i /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
+	  mv -i ${tmpfile} /etc/pacman.d/mirrorlist
+	else
+	  echo "## could not download list, ranking original mirrorlist"
+	  cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+	  sed '/^#\S/ s|#||' -i /etc/pacman.d/mirrorlist.backup
+	  rankmirrors --verbose -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
+	fi
+	chmod +r /etc/pacman.d/mirrorlist
+	nano /etc/pacman.d/mirrorlist
+}
+
+check_dialog
+user_variables
+update_locale
+partition_disk
+encrypt_disk
+update_mirrorlist
 
 echo "## installing base system"
 pacstrap -i $mountpoint base base-devel
@@ -141,9 +168,9 @@ arch_chroot "hwclock --systohc --utc"
 echo "## setting hostname"
 echo $hostname > $mountpoint/etc/hostname
 
-echo "## installing grub to /dev/${DSK}"
+echo "## installing grub to ${DSK}"
 pacstrap -i $mountpoint grub
-arch_chroot "grub-install --recheck /dev/${DSK}"
+arch_chroot "grub-install --recheck ${DSK}"
 cryptdevice="cryptdevice=$partroot:$maproot"
 if [ ${HAS_TRIM} -eq 1 ]; then
   echo "## appending allow-discards"
