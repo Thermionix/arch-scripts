@@ -78,7 +78,7 @@ partition_disk() {
 
 encrypt_disk() {
 	echo "## encrypting $partroot"
-	cryptsetup -c "aes-xts-plain" -y -s "512" -r luksFormat $partroot
+	cryptsetup -c "aes-xts-plain64" -y -s "512" -r luksFormat $partroot
 	echo "## opening $partroot"
 	cryptsetup luksOpen $partroot $maproot
 	echo "## mkfs /dev/mapper/$maproot"
@@ -122,7 +122,7 @@ pacstrap -i $mountpoint base base-devel
 
 echo "## generating fstab entries"
 genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
-echo "$mapswap $partswap /dev/urandom swap,cipher=aes-cbc-essiv:sha256,size=256" >> $mountpoint/etc/crypttab
+echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
 echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 if [ ${HAS_TRIM} -eq 1 ]; then
 	echo "## adding trim support"
