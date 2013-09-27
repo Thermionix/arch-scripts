@@ -1,6 +1,7 @@
 #!/bin/bash
 
 echo "###### Do not run as root"
+command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
 
 install_aur_helper() {
 	echo "## Installing AUR Helper"
@@ -284,106 +285,85 @@ invalid_option() {
     echo "Invalid option. Try another one."
 }
 
-finish(){
+reboot(){
 	read -p "Reboot your system [y/N]: " OPTION
 		[[ $OPTION == y ]] && reboot
 	exit 0
 }
 
 
-while true
+cmd=(whiptail --separate-output --checklist "Select options:" 22 60 16)
+options=(
+1 "AUR Helper" off
+2 "enable multilib repository" off
+3 "Xorg" off
+4 "Video Drivers" off
+5 "Desktop Environment" off
+6 "Network Manager" off
+7 "Fonts" off
+8 "Desktop Applications" off
+9 "Wine" off
+10 "grub-holdshift" off
+11 "Printing" off
+12 "Scanning" off
+13 "Pulseaudio" off
+14 "Enable X autostart" off
+15 "Gsettings" off
+16 "List AUR PKGs" off
+)
+choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+
+for choice in $choices
 do
-	echo " 1) $(mainmenu_item "${checklist[1]}" "AUR Helper")"
-	echo " 2) $(mainmenu_item "${checklist[2]}" "enable multilib repository")"
-	echo " 3) $(mainmenu_item "${checklist[3]}" "Xorg")"
-	echo " 4) $(mainmenu_item "${checklist[4]}" "Video Drivers")"
-	echo " 5) $(mainmenu_item "${checklist[5]}" "Desktop Environment")"
-	echo " 6) $(mainmenu_item "${checklist[6]}" "Network Manager")"
-	echo " 7) $(mainmenu_item "${checklist[7]}" "Fonts")"
-	echo " 8) $(mainmenu_item "${checklist[8]}" "Desktop Applications")"
-	echo " 9) $(mainmenu_item "${checklist[9]}" "Wine")"
-	echo " 10) $(mainmenu_item "${checklist[10]}" "grub-holdshift")"
-	echo " 11) $(mainmenu_item "${checklist[11]}" "Printing")"
-	echo " 12) $(mainmenu_item "${checklist[12]}" "Pulseaudio")"
-	echo " 13) $(mainmenu_item "${checklist[13]}" "Enable X autostart")"
-	echo " 14) $(mainmenu_item "${checklist[14]}" "Gsettings")"
-	echo " 15) $(mainmenu_item "${checklist[15]}" "List AUR PKGs")"
-	echo ""
-	echo " q) Quit"
-	echo ""
-	MAINMENU+=" q"
-	read_input_options "$MAINMENU"
-	for OPT in ${OPTIONS[@]}; do
-		case "$OPT" in
+    case $choice in
 		1)
 			install_aur_helper
-			checklist[1]=1
 		;;
 		2)
 			install_multilib_repo
-			checklist[2]=1
 		;;
 		3)
 			install_xorg
-			checklist[3]=1
 		;;
 		4)
 			install_video_drivers
-			checklist[4]=1
 		;;
 		5)
 			install_desktop_environment
-			checklist[5]=1
 		;;
 		6)
 			install_network_manager
-			checklist[6]=1
 		;;
 		7)
 			install_fonts
-			checklist[7]=1
 		;;
 		8)
 			install_desktop_applications
-			checklist[8]=1
 		;;
 		9)
 			install_wine
-			checklist[9]=1
 		;;
 		10)
 			install_grub_holdshift
-			checklist[10]=1
 		;;
 		11)
 			install_printing
-			checklist[11]=1
 		;;
 		12)
-			install_pulse_audio
-			checklist[12]=1
+			install_scanning
 		;;
 		13)
-			install_x_autostart
-			checklist[13]=1
+			install_pulse_audio
 		;;
 		14)
-			install_gsettings
-			checklist[14]=1
+			install_x_autostart
 		;;
 		15)
+			install_gsettings
+		;;
+		16)
 			list_aur_pkgs
-			checklist[15]=1
 		;;
-
-
-		"q")
-			finish
-		;;
-		*)
-			invalid_option
-		;;
-		esac
-	done
+    esac
 done
 

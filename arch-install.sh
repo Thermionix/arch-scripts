@@ -1,12 +1,6 @@
 #!/bin/bash
 
-check_dialog() {
-	read dialog <<< "$(which whiptail dialog 2> /dev/null)"
-	[[ "$dialog" ]] || {
-		echo 'neither whiptail nor dialog found' >&2
-		exit 1
-	}
-}
+command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
 
 net_connectivity() {
 	echo "## checking internet connectivity"
@@ -24,13 +18,13 @@ enable_ssh() {
 user_variables() {
 	echo "## defining variables for installation"
 	# cat /etc/locale.gen | grep -oP "^#\K[a-zA-Z0-9@._-]+"
-	locale=$($dialog --nocancel --inputbox "Set locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
-	keyboard=$($dialog --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
-	zone=$($dialog --nocancel --inputbox "Set zone:" 10 40 "Australia" 3>&1 1>&2 2>&3)
-	subzone=$($dialog --nocancel --inputbox "Set subzone:" 10 40 "Melbourne" 3>&1 1>&2 2>&3)
-	country=$($dialog --nocancel --inputbox "Set mirrorlist country code:" 10 40 "AU" 3>&1 1>&2 2>&3)
-	hostname=$($dialog --nocancel --inputbox "Set hostname:" 10 40 "arch-laptop" 3>&1 1>&2 2>&3)
-	username=$($dialog --nocancel --inputbox "Set username:" 10 40 "thermionix" 3>&1 1>&2 2>&3)
+	locale=$(whiptail --nocancel --inputbox "Set locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
+	keyboard=$(whiptail --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
+	zone=$(whiptail --nocancel --inputbox "Set zone:" 10 40 "Australia" 3>&1 1>&2 2>&3)
+	subzone=$(whiptail --nocancel --inputbox "Set subzone:" 10 40 "Melbourne" 3>&1 1>&2 2>&3)
+	country=$(whiptail --nocancel --inputbox "Set mirrorlist country code:" 10 40 "AU" 3>&1 1>&2 2>&3)
+	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-laptop" 3>&1 1>&2 2>&3)
+	username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "thermionix" 3>&1 1>&2 2>&3)
 }
 
 update_locale() {
@@ -43,7 +37,7 @@ update_locale() {
 
 partition_disk() {
 	disks=`parted --list | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
-	DSK=$($dialog --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
+	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
 	HAS_TRIM=0
 	if [ -n "$(hdparm -I ${DSK} 2>&1 | grep 'TRIM supported')" ]; then
@@ -61,7 +55,7 @@ partition_disk() {
 	mountpoint="/mnt"
 
 	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
-	swap_size=$($dialog --nocancel --inputbox "Set swap partition size \n(default calculated from meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
+	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
 	boot_end=$(( 2 + 500 ))
 	swap_end=$(( $boot_end + ${swap_size} ))
 
@@ -79,16 +73,12 @@ partition_disk() {
 	parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
 	parted -s ${DSK} name 4 $labelroot
 
-	$dialog --title "partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
+	whiptail --title "generated partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
 }
 
 encrypt_disk() {
-	echo "## running crypt benchmark"
-	cryptsetup benchmark
-	read -e -p "Set cipher: " -i "aes-xts-plain" cipher
-	read -e -p "Set keysize: " -i "512" keysize
 	echo "## encrypting $partroot"
-	cryptsetup -c $cipher -y -s $keysize -r luksFormat $partroot
+	cryptsetup -c "aes-xts-plain" -y -s "512" -r luksFormat $partroot
 	echo "## opening $partroot"
 	cryptsetup luksOpen $partroot $maproot
 	echo "## mkfs /dev/mapper/$maproot"
@@ -121,7 +111,6 @@ update_mirrorlist() {
 	nano /etc/pacman.d/mirrorlist
 }
 
-check_dialog
 user_variables
 update_locale
 partition_disk
@@ -174,14 +163,14 @@ pacstrap -i $mountpoint grub
 arch_chroot "grub-install --recheck ${DSK}"
 cryptdevice="cryptdevice=$partroot:$maproot"
 if [ ${HAS_TRIM} -eq 1 ]; then
-  echo "## appending allow-discards"
-  cryptdevice+=":allow-discards"
+	echo "## appending allow-discards"
+	cryptdevice+=":allow-discards"
 fi
 sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/default/grub
 sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub 
 nano $mountpoint/etc/default/grub
 arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
-$dialog --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
+whiptail --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
 
 echo "## adding user: $username"
 pacstrap -i $mountpoint sudo
@@ -192,7 +181,7 @@ sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 #echo "## disabling root login"
 #arch_chroot "passwd -l root"
 
-if $dialog --yesno "enable autologin for user: $username?" 8 40 ; then
+if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
 	echo "## enabling autologin for user: $username"
 	mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
 	pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
@@ -202,13 +191,13 @@ if $dialog --yesno "enable autologin for user: $username?" 8 40 ; then
 	popd
 fi
 
-if $dialog --yesno "enable dhcpcd?" 8 40 ; then
+if whiptail --yesno "enable dhcpcd?" 8 40 ; then
 	echo "## enabling dhcpcd"
 	arch_chroot "systemctl enable dhcpcd.service"
 	## handle wifi?
 fi
 
-if $dialog --yesno "enable network time?" 8 40 ; then
+if whiptail --yesno "enable network time?" 8 40 ; then
 	echo "## enabling network time"
 	pacstrap -i $mountpoint ntp
 	arch_chroot "ntpd -q"
@@ -216,7 +205,10 @@ if $dialog --yesno "enable network time?" 8 40 ; then
 	arch_chroot "systemctl enable ntpd.service"
 fi
 
-if $dialog --yesno "Reboot now?" 8 40 ; then
+# offer to install openssh whiptail
+# pacstrap -i $mountpoint
+
+if whiptail --yesno "Reboot now?" 8 40 ; then
 	echo "## unmounting and rebooting"
 	umount -l $mountpoint/boot
 	umount -l $mountpoint
