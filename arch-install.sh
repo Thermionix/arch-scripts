@@ -78,7 +78,7 @@ partition_disk() {
 
 encrypt_disk() {
 	echo "## encrypting $partroot"
-	cryptsetup -c "aes-xts-plain64" -y -s "512" -r luksFormat $partroot
+	cryptsetup -c aes-xts-plain64 -y -s 512 -h sha512 -r luksFormat $partroot
 	echo "## opening $partroot"
 	cryptsetup luksOpen $partroot $maproot
 	echo "## mkfs /dev/mapper/$maproot"
@@ -118,7 +118,7 @@ encrypt_disk
 update_mirrorlist
 
 echo "## installing base system"
-pacstrap -i $mountpoint base base-devel
+pacstrap -i $mountpoint base base-devel openssh whiptail
 
 echo "## generating fstab entries"
 genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
@@ -204,9 +204,6 @@ if whiptail --yesno "enable network time?" 8 40 ; then
 	arch_chroot "hwclock -w"
 	arch_chroot "systemctl enable ntpd.service"
 fi
-
-# offer to install openssh whiptail
-# pacstrap -i $mountpoint
 
 if whiptail --yesno "Reboot now?" 8 40 ; then
 	echo "## unmounting and rebooting"
