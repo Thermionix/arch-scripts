@@ -1,7 +1,7 @@
 #!/bin/bash
 
 check_dialog() {
-	read dialog <<< "$(which $dialog dialog 2> /dev/null)"
+	read dialog <<< "$(which whiptail dialog 2> /dev/null)"
 	[[ "$dialog" ]] || {
 		echo 'neither $dialog nor dialog found' >&2
 		exit 1
@@ -78,7 +78,7 @@ partition_disk() {
 	parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
 	parted -s ${DSK} name 4 $labelroot
 
-	whiptail --title "partition layout" --msgbox "`sudo parted -s ${DSK} print`" 20 70
+	$dialog --title "partition layout" --msgbox "`sudo parted -s ${DSK} print`" 20 70
 }
 
 encrypt_disk() {
