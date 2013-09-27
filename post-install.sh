@@ -9,10 +9,15 @@ fi
 
 install_aur_helper() {
 	echo "## Installing AUR Helper"
+
 	sudo pacman -S --needed wget base-devel
+
 	if ! grep -q "EDITOR" ~/.bashrc ; then 
 		echo "export EDITOR=\"nano\"" >> ~/.bashrc
 	fi
+
+	# choose packer pacaur yaourt?
+	# define in variable?
 	 
 	mkdir packerbuild
 	pushd packerbuild
@@ -45,7 +50,7 @@ install_xorg() {
 
 install_video_drivers() {
 	case $(whiptail --menu "Choose a video driver" 20 60 12 \
-	"1" "vesa" \
+	"1" "vesa (generic)" \
 	"2" "virtualbox" \
 	"3" "intel" \
 	"4" "catalyst" \
@@ -104,16 +109,20 @@ install_video_drivers() {
 }
 
 install_desktop_environment() {
-	echo "## Installing Desktop Environment"
-
-	#if case = mate
-	#pacman -S mate mate-extras
-	#echo "exec mate-session" > ~/.xinitrc
-
-	#if case = gnome
-	sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-flashback-session gnome-applets
-	sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller dconf-editor
-	echo "exec gnome-session --session=gnome-flashback" > ~/.xinitrc
+	case $(whiptail --menu "Choose a Desktop Environment" 20 60 12 \
+	"1" "gnome" \
+	"2" "mate" \
+	3>&1 1>&2 2>&3) in
+		1)
+			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-flashback-session gnome-applets
+			sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller dconf-editor
+			echo "exec gnome-session --session=gnome-flashback" > ~/.xinitrc
+		;;
+		2)
+			pacman -S mate mate-extras
+			echo "exec mate-session" > ~/.xinitrc
+		;;
+	esac
 }
 
 install_network_manager() {
@@ -129,8 +138,7 @@ install_fonts() {
 	echo "## Installing Fonts"
 	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
-	read -p "Install ttf-ms-fonts? [y/N]: " OPTION
-		[[ $OPTION == y ]] && packer -S ttf-ms-fonts
+	whiptail --yesno "Install ttf-ms-fonts?" 8 40 && { packer -S ttf-ms-fonts ; }
 }
 
 install_scanning() {
@@ -158,8 +166,16 @@ install_desktop_applications() {
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted
 	 
 	sudo pacman -S mumble gimp
+}
 
+install_pacman_gui() {
 	sudo pacman -S gnome-packagekit
+
+	#%wheel ALL = NOPASSWD: /usr/bin/pacman -Sy
+	#packer -S pacman-notifier
+	#pacman-notifier &
+	#pacman -S pacupdate
+	#pacupdate &
 }
 
 install_steam_and_tweaks() {
@@ -174,9 +190,9 @@ install_wine() {
 	sudo pacman -S wine winetricks wine-mono wine_gecko
 	sudo pacman -S alsa-lib alsa-plugins lib32-alsa-lib lib32-alsa-plugins lib32-mpg123 libpulse mpg123 lib32-libpulse lib32-openal
 	 
-	#winetricks videomemorysize=2048 3072?
 	WINEARCH=win32 winecfg
 
+	#winetricks videomemorysize=2048 3072?
 	echo "export WINEDLLOVERRIDES='winemenubuilder.exe=d'" >> ~/.bashrc
 	sed -i -e "/^text/d" -e "/^image/d" ~/.local/share/applications/mimeinfo.cache
 	rm ~/.local/share/applications/wine-extension*
@@ -230,11 +246,13 @@ install_gsettings() {
 		gsettings set org.gnome.gedit.preferences.editor bracket-matching 'true'
 	fi
 
-	mkdir -p ~/.config/gtk-3.0
-	if [ ! -f ~/.config/gtk-3.0/settings.ini ] ; then
-		echo -e "[Settings]\ngtk-recent-files-max-age=0\ngtk-recent-files-limit=0" > ~/.config/gtk-3.0/settings.ini
+	if whiptail --yesno "disable gtk list recently-used files?" 8 40 ; then
+		mkdir -p ~/.config/gtk-3.0
+		if [ ! -f ~/.config/gtk-3.0/settings.ini ] ; then
+			echo -e "[Settings]\ngtk-recent-files-max-age=0\ngtk-recent-files-limit=0" > ~/.config/gtk-3.0/settings.ini
+		fi
+		rm ~/.local/share/recently-used.xbel
 	fi
-	rm ~/.local/share/recently-used.xbel
 
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \"['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']\"
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name \"terminal\"
