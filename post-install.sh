@@ -249,49 +249,6 @@ list_aur_pkgs() {
 	sudo pacman -Qm | awk '{print $1}' | less
 }
 
-
-checkbox() {
-    #display [X] or [ ]
-    [[ "$1" -eq 1 ]] && echo -e "${BBlue}[${Reset}${Bold}X${BBlue}]${Reset}" || echo -e "${BBlue}[ ${BBlue}]${Reset}";
-}
-
-
-mainmenu_item() {
-    echo -e "$(checkbox "$1") ${Bold}$2${Reset}"
-}
-
-read_input_options() {
-	local line
-	local packages
-	if [[ $AUTOMATIC_MODE -eq 1 ]]; then
-		array=("$1")
-	else
-		read -p "$prompt2" OPTION
-		  array=("$OPTION")
-		fi
-	for line in ${array[@]/,/ }; do
-		if [[ ${line/-/} != $line ]]; then
-		for ((i=${line%-*}; i<=${line#*-}; i++)); do
-		packages+=($i);
-	    done
-	else
-		packages+=($line)
-		fi
-	done
-	OPTIONS=("${packages[@]}")
-}
-
-invalid_option() {
-    echo "Invalid option. Try another one."
-}
-
-reboot(){
-	read -p "Reboot your system [y/N]: " OPTION
-		[[ $OPTION == y ]] && reboot
-	exit 0
-}
-
-
 cmd=(whiptail --separate-output --checklist "Select options:" 22 60 16)
 options=(
 1 "AUR Helper" off
@@ -310,6 +267,7 @@ options=(
 14 "Enable X autostart" off
 15 "Gsettings" off
 16 "List AUR PKGs" off
+17 "reboot" off
 )
 choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 
@@ -363,6 +321,9 @@ do
 		;;
 		16)
 			list_aur_pkgs
+		;;
+		17)
+			reboot
 		;;
     esac
 done
