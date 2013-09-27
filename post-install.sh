@@ -1,8 +1,8 @@
 #!/bin/bash
 
-command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
+`command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }`
 
-if ! [ $(id -u) = 0 ]; then
+if [ $(id -u) = 0 ]; then
 	echo "Don't run as root!"
 	exit 1
 fi
@@ -71,10 +71,10 @@ install_video_drivers() {
 			echo "## installing catalyst"
 
 			if ! grep -q "\[catalyst\]" /etc/pacman.conf ; then
-				echo -e '\n[catalyst]\nInclude = /etc/pacman.d/catalyst' | sudo tee --append /etc/pacman.conf
+				echo -e "\n[catalyst]\nInclude = /etc/pacman.d/catalyst" | sudo tee --append /etc/pacman.conf
 			fi
 			 
-			echo -e "Server = http://catalyst.wirephire.com/repo/catalyst/\$arch\nServer = http://70.239.162.206/catalyst-mirror/repo/catalyst/\$arch\nServer = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/\$arch" | sudo tee /etc/pacman.d/catalyst
+			`echo -e "Server = http://catalyst.wirephire.com/repo/catalyst/\$arch\nServer = http://70.239.162.206/catalyst-mirror/repo/catalyst/\$arch\nServer = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/\$arch" | sudo tee /etc/pacman.d/catalyst`
 			 
 			sudo pacman-key --keyserver pgp.mit.edu --recv-keys 0xabed422d653c3094
 			sudo pacman-key --lsign-key 0xabed422d653c3094
@@ -193,7 +193,7 @@ install_wine() {
 	WINEARCH=win32 winecfg
 
 	#winetricks videomemorysize=2048 3072?
-	echo "export WINEDLLOVERRIDES='winemenubuilder.exe=d'" >> ~/.bashrc
+	`echo "export WINEDLLOVERRIDES='winemenubuilder.exe=d'" >> ~/.bashrc`
 	sed -i -e "/^text/d" -e "/^image/d" ~/.local/share/applications/mimeinfo.cache
 	rm ~/.local/share/applications/wine-extension*
 }
@@ -249,7 +249,7 @@ install_gsettings() {
 	if whiptail --yesno "disable gtk list recently-used files?" 8 40 ; then
 		mkdir -p ~/.config/gtk-3.0
 		if [ ! -f ~/.config/gtk-3.0/settings.ini ] ; then
-			echo -e "[Settings]\ngtk-recent-files-max-age=0\ngtk-recent-files-limit=0" > ~/.config/gtk-3.0/settings.ini
+			`echo -e "[Settings]\ngtk-recent-files-max-age=0\ngtk-recent-files-limit=0" > ~/.config/gtk-3.0/settings.ini`
 		fi
 		rm ~/.local/share/recently-used.xbel
 	fi
