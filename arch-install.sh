@@ -118,7 +118,7 @@ encrypt_disk
 update_mirrorlist
 
 echo "## installing base system"
-pacstrap -i $mountpoint base base-devel openssh whiptail
+pacstrap -i $mountpoint base base-devel openssh libnewt
 
 echo "## generating fstab entries"
 genfstab -U -p $mountpoint >> $mountpoint/etc/fstab

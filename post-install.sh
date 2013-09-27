@@ -344,7 +344,7 @@ do
 			list_aur_pkgs
 		;;
 		18)
-			reboot
+			sudo reboot
 		;;
     esac
 done
