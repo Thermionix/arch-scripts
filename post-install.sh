@@ -165,7 +165,7 @@ install_desktop_applications() {
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted
 	 
-	sudo pacman -S mumble gimp
+	sudo pacman -S mumble gimp minitube
 }
 
 install_pacman_gui() {
