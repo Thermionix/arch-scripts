@@ -117,6 +117,7 @@ install_desktop_environment() {
 			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-flashback-session gnome-applets
 			sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller dconf-editor
 			echo "exec gnome-session --session=gnome-flashback" > ~/.xinitrc
+			packer -S mediterraneannight-theme
 		;;
 		2)
 			pacman -S mate mate-extras
@@ -161,11 +162,13 @@ install_desktop_applications() {
 		echo "alias yolo='packer -Syu'" >> ~/.bash_aliases
 	fi
 	
-	sudo pacman -S firefox vlc clementine gstreamer0.10-plugins flashplugin
+	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
+
+	sudo pacman -S clementine quodlibet guayadeque
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted
 	 
-	sudo pacman -S mumble gimp
+	sudo pacman -S mumble gimp mtpfs
 }
 
 install_pacman_gui() {
