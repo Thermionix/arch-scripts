@@ -16,19 +16,19 @@ install_aur_helper() {
 		echo "export EDITOR=\"nano\"" >> ~/.bashrc
 	fi
 
-	# choose packer pacaur yaourt?
+	# choose pacaur pacaur yaourt?
 	# define in variable?
 	 
-	mkdir packerbuild
-	pushd packerbuild
+	mkdir -p pacaurbuild
+	pushd pacaurbuild
 	 
-	wget http://aur.archlinux.org/packages/pa/packer/packer.tar.gz
-	wget http://aur.archlinux.org/packages/pa/packer/PKGBUILD
+	wget http://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz
+	wget http://aur.archlinux.org/packages/pa/pacaur/PKGBUILD
 	 
 	makepkg -s PKGBUILD --install
 	 
 	popd
-	rm -rf packerbuild
+	rm -rf pacaurbuild
 }
 
 install_multilib_repo() {
@@ -117,7 +117,7 @@ install_desktop_environment() {
 			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-flashback-session gnome-applets
 			sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller dconf-editor
 			echo "exec gnome-session --session=gnome-flashback" > ~/.xinitrc
-			packer -S mediterraneannight-theme
+			pacaur -S mediterraneannight-theme
 		;;
 		2)
 			pacman -S mate mate-extras
@@ -139,7 +139,7 @@ install_fonts() {
 	echo "## Installing Fonts"
 	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
-	whiptail --yesno "Install ttf-ms-fonts?" 8 40 && { packer -S ttf-ms-fonts ; }
+	whiptail --yesno "Install ttf-ms-fonts?" 8 40 && { pacaur -S ttf-ms-fonts ; }
 }
 
 install_scanning() {
@@ -159,23 +159,23 @@ install_desktop_applications() {
 	fi
 	
 	if ! grep -q "yolo" ~/.bash_aliases ; then 
-		echo "alias yolo='packer -Syu'" >> ~/.bash_aliases
+		echo "alias yolo='pacaur -Syu'" >> ~/.bash_aliases
 	fi
 	
 	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
 
-	sudo pacman -S clementine quodlibet guayadeque
+	sudo pacman -S quodlibet # clementine guayadeque
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted
 	 
-	sudo pacman -S mumble gimp mtpfs
+	sudo pacman -S mumble gimp mtpfs minitube
 }
 
 install_pacman_gui() {
 	sudo pacman -S gnome-packagekit
 
 	#%wheel ALL = NOPASSWD: /usr/bin/pacman -Sy
-	#packer -S pacman-notifier
+	#pacaur -S pacman-notifier
 	#pacman-notifier &
 	#pacman -S pacupdate
 	#pacupdate &
@@ -183,7 +183,7 @@ install_pacman_gui() {
 
 install_steam_and_tweaks() {
 	sudo pacman -S steam
-	packer -S sdl-nokeyboardgrab
+	pacaur -S sdl-nokeyboardgrab
 	#echo "options usbhid mousepoll=2" | sudo tee /etc/modprobe.d/mousepolling.conf
 }
 
@@ -204,7 +204,7 @@ install_wine() {
 install_grub_holdshift() {
 	echo "## Installing grub-holdshift"
 
-	packer -S grub-holdshift
+	pacaur -S grub-holdshift
 	 
 	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
 		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
