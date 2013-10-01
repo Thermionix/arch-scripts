@@ -254,6 +254,11 @@ install_gsettings() {
 		rm ~/.local/share/recently-used.xbel
 	fi
 
+	#~/.config/gtk-3.0/settings.ini
+	#[Settings]
+	#gtk-application-prefer-dark-theme=1
+
+
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \"['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']\"
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name \"terminal\"
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command \"gnome-terminal\"
