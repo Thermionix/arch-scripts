@@ -16,7 +16,7 @@ install_aur_helper() {
 		echo "export EDITOR=\"nano\"" >> ~/.bashrc
 	fi
 
-	# choose pacaur pacaur yaourt?
+	# whiptail choose pacaur pacaur yaourt?
 	# define in variable?
 	 
 	mkdir -p pacaurbuild
@@ -161,7 +161,8 @@ install_desktop_applications() {
 	if ! grep -q "yolo" ~/.bash_aliases ; then 
 		echo "alias yolo='pacaur -Syu'" >> ~/.bash_aliases
 	fi
-	
+
+	# whiptail checklist following	
 	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
 
 	sudo pacman -S quodlibet # clementine guayadeque
