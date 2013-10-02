@@ -172,6 +172,22 @@ install_desktop_applications() {
 	sudo pacman -S mumble gimp mtpfs minitube
 }
 
+install_laptop_mode() {
+	# tpfanco
+	sudo pacaur -S laptop-mode-tools
+	sudo systemctl enable laptop-mode.service
+
+	# cpupower frequency-info
+
+	# https://wiki.archlinux.org/index.php/TLP
+
+	#packer -S tpfand
+	#sudo systemctl start tpfand
+	#sudo systemctl enable tpfand
+
+	# append to /etc/default/grub ^GRUB_CMDLINE_LINUX_DEFAULT "i915_enable_rc6=1 i915_enable_fbc=1"
+}
+
 install_pacman_gui() {
 	sudo pacman -S gnome-packagekit
 
