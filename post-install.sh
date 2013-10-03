@@ -169,7 +169,7 @@ install_desktop_applications() {
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted
 	 
-	sudo pacman -S mumble gimp mtpfs minitube midori bleachbit
+	sudo pacman -S mumble gimp mtpfs minitube midori bleachbit gvfs-smb
 }
 
 install_laptop_mode() {
