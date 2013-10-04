@@ -18,6 +18,8 @@ install_aur_helper() {
 
 	# whiptail choose pacaur pacaur yaourt?
 	# define in variable?
+
+	# INSTALL COWER
 	 
 	mkdir -p pacaurbuild
 	pushd pacaurbuild
@@ -309,8 +311,9 @@ options=(
 14 "Enable X autostart" off
 15 "Gsettings" off
 16 "Steam and gaming tweaks" off
-17 "List AUR PKGs" off
-18 "reboot" off
+17 "Laptop mode" off
+18 "List AUR PKGs" off
+19 "reboot" off
 )
 choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 
@@ -366,9 +369,12 @@ do
 			install_steam_and_tweaks
 		;;
 		17)
-			list_aur_pkgs
+			install_laptop_mode
 		;;
 		18)
+			list_aur_pkgs
+		;;
+		19)
 			sudo reboot
 		;;
     esac
