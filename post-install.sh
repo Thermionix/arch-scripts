@@ -171,7 +171,7 @@ install_desktop_applications() {
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted
 	 
-	sudo pacman -S mumble gimp mtpfs minitube midori bleachbit gvfs-smb
+	sudo pacman -S mumble gimp mtpfs minitube midori bleachbit gvfs-smb youtube-dl
 }
 
 install_laptop_mode() {
@@ -188,6 +188,14 @@ install_laptop_mode() {
 	#sudo systemctl enable tpfand
 
 	# append to /etc/default/grub ^GRUB_CMDLINE_LINUX_DEFAULT "i915_enable_rc6=1 i915_enable_fbc=1"
+
+#    acpid: ACPI support
+#    bluez-utils: bluetooth support
+#    hdparm: hard disk power management
+#    sdparm: SCSI disk power management
+#    ethtool: ethernet support
+#    wireless_tools: WiFi support
+#    xorg-xset: DPMS standby support
 }
 
 install_pacman_gui() {
