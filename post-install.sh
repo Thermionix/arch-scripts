@@ -1,6 +1,6 @@
 #!/bin/bash
 
-`command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }`
+`command -v whiptail >/dev/null 2>&1 || { echo "whiptail (pkg libnewt) required for this script" >&2 ; exit 1 ; }`
 
 if [ $(id -u) = 0 ]; then
 	echo "Don't run as root!"
