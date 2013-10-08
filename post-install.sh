@@ -116,12 +116,13 @@ install_desktop_environment() {
 	"2" "mate" \
 	3>&1 1>&2 2>&3) in
 		1)
-			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-flashback-session gnome-applets
+			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-shell-extensions
 			sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller dconf-editor
-			echo "exec gnome-session --session=gnome-flashback" > ~/.xinitrc
+			echo "exec gnome-session --session=gnome-classic" > ~/.xinitrc
 			pacaur -S mediterraneannight-theme
 		;;
 		2)
+			# add mate repo
 			pacman -S mate mate-extras
 			echo "exec mate-session" > ~/.xinitrc
 		;;
@@ -267,6 +268,7 @@ install_gsettings() {
 	gsettings set org.gnome.nautilus.preferences sort-directories-first 'true'
 	gsettings set org.gtk.Settings.FileChooser show-hidden 'true'
 	gsettings set org.gnome.desktop.background show-desktop-icons 'true'
+	#gsettings set org.gnome.settings-daemon.plugins.cursor active 'false'
 
 	if gsettings list-schemas | grep -q gedit ; then
 		echo "# updating gedit settings"
