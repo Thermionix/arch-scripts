@@ -278,6 +278,8 @@ install_gsettings() {
 		gsettings set org.gnome.gedit.preferences.editor bracket-matching 'true'
 	fi
 
+	#gsettings set org.gnome.shell.overrides workspaces-only-on-primary false
+
 	if whiptail --yesno "disable gtk list recently-used files?" 8 40 ; then
 		mkdir -p ~/.config/gtk-3.0
 		if [ ! -f ~/.config/gtk-3.0/settings.ini ] ; then
