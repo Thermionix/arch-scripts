@@ -131,7 +131,7 @@ install_desktop_environment() {
 
 install_network_manager() {
 	echo "## Installing NetworkManager"
-	sudo pacman -S networkmanager network-manager-applet networkmanager-dispatcher-ntpd
+	sudo pacman -S networkmanager networkmanager-dispatcher-ntpd #network-manager-applet 
 	sudo systemctl disable dhcpcd
 	sudo systemctl stop dhcpcd
 	sudo systemctl enable NetworkManager
