@@ -172,7 +172,9 @@ install_desktop_applications() {
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted minicom
 	 
-	sudo pacman -S mumble gimp mtpfs minitube midori bleachbit gvfs-smb youtube-dl
+	sudo pacman -S mumble gimp minitube midori bleachbit youtube-dl
+
+	sudo pacman -S mtpfs gvfs-smb exfat-utils fuse-exfat
 }
 
 install_laptop_mode() {
