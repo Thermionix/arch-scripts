@@ -17,8 +17,10 @@ ln -s /mnt/storage/data/VirtualBox ~/.VirtualBox
 ln -s /mnt/storage/games/winetricks/ ~/.cache/winetricks
 ln -s /mnt/storage/games/.wine/ ~/.wine
  
-pacman -S autofs
-mkdir /media/fubox
+sudo pacman -S autofs
+sudo mkdir -p /media/fubox
 #echo "/media/fubox /etc/autofs/auto.fubox --ghost" >> /etc/autofs/auto.master
 #echo "music -fstype=cifs,ro,noperm ://192.168.1.62/share/music" > /etc/autofs/auto.fubox
-systemctl enable autofs
+#echo "tank -fstype=cifs,rw,noperm,username=user,password=password ://192.168.1.62/test\$" >> /etc/autofs/auto.fubox
+sudo systemctl enable autofs
+sudo systemctl start autofs
