@@ -113,7 +113,7 @@ install_video_drivers() {
 install_desktop_environment() {
 	case $(whiptail --menu "Choose a Desktop Environment" 20 60 12 \
 	"1" "gnome" \
-	"2" "mate" \
+	"2" "xfce" \
 	3>&1 1>&2 2>&3) in
 		1)
 			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-shell-extensions
@@ -122,9 +122,9 @@ install_desktop_environment() {
 			pacaur -S mediterraneannight-theme
 		;;
 		2)
-			# add mate repo
-			pacman -S mate mate-extras
-			echo "exec mate-session" > ~/.xinitrc
+			pacman -S xfce4
+			pacaur -S xfce-theme-greenbird-git
+			echo "exec startxfce4" > ~/.xinitrc
 		;;
 	esac
 }
