@@ -19,13 +19,22 @@ install_aur_helper() {
 	# whiptail choose pacaur pacaur yaourt?
 	# define in variable?
 
-	# INSTALL COWER
+	mkdir -p cowerbuild
+	pushd cowerbuild
+	 
+	wget https://aur.archlinux.org/packages/co/cower/cower.tar.gz
+	wget https://aur.archlinux.org/packages/co/cower/PKGBUILD
+	 
+	makepkg -s PKGBUILD --install
+	 
+	popd
+	rm -rf cowerbuild
 	 
 	mkdir -p pacaurbuild
 	pushd pacaurbuild
 	 
-	wget http://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz
-	wget http://aur.archlinux.org/packages/pa/pacaur/PKGBUILD
+	wget https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz
+	wget https://aur.archlinux.org/packages/pa/pacaur/PKGBUILD
 	 
 	makepkg -s PKGBUILD --install
 	 
