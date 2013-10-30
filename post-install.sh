@@ -114,6 +114,7 @@ install_desktop_environment() {
 	case $(whiptail --menu "Choose a Desktop Environment" 20 60 12 \
 	"1" "gnome" \
 	"2" "xfce" \
+	"3" "cinnamon" \
 	3>&1 1>&2 2>&3) in
 		1)
 			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-shell-extensions
@@ -125,6 +126,10 @@ install_desktop_environment() {
 			pacman -S xfce4
 			pacaur -S xfce-theme-greenbird-git
 			echo "exec startxfce4" > ~/.xinitrc
+		;;
+		3)
+			pacman -S cinnamon
+			echo "exec cinnamon-session" > ~/.xinitrc
 		;;
 	esac
 }
