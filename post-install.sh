@@ -137,12 +137,12 @@ install_desktop_environment() {
 			pacaur -S mediterraneannight-theme
 		;;
 		2)
-			pacman -S xfce4
+			sudo pacman -S xfce4
 			pacaur -S xfce-theme-greenbird-git
 			echo "exec startxfce4" > ~/.xinitrc
 		;;
 		3)
-			pacman -S cinnamon
+			sudo pacman -S cinnamon
 			echo "exec cinnamon-session" > ~/.xinitrc
 		;;
 	esac
