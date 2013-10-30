@@ -188,13 +188,15 @@ install_desktop_applications() {
 	# whiptail checklist following	
 	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
 
-	sudo pacman -S quodlibet # clementine guayadeque
+	sudo pacman -S guayadeque # clementine quodlibet
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted minicom
 	 
-	sudo pacman -S mumble gimp minitube midori bleachbit youtube-dl
+	sudo pacman -S mumble gimp minitube midori bleachbit youtube-dl python-pip
 
-	sudo pacman -S mtpfs gvfs-smb exfat-utils fuse-exfat
+	sudo pacman -S mtpfs gvfs-smb exfat-utils fuse-exfat git
+
+	# samba btsync
 }
 
 install_laptop_mode() {
