@@ -132,7 +132,8 @@ install_desktop_environment() {
 	3>&1 1>&2 2>&3) in
 		1)
 			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-shell-extensions
-			sudo pacman -S gedit gnome-tweak-tool nautilus-open-terminal file-roller dconf-editor
+			sudo pacman -S gedit gnome-tweak-tool file-roller dconf-editor
+			#nautilus-open-terminal
 			echo "exec gnome-session --session=gnome-classic" > ~/.xinitrc
 			pacaur -S mediterraneannight-theme
 		;;
