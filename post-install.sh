@@ -65,20 +65,21 @@ install_video_drivers() {
 	"2" "virtualbox" \
 	"3" "intel" \
 	"4" "catalyst" \
+	"5" "foss amd" \
 	3>&1 1>&2 2>&3) in
 		1)
 			echo "## installing vesa"
 			sudo pacman -S xf86-video-vesa
 		;;
-    	2)
+    		2)
 			echo "## installing virtualbox"
 			sudo pacman -S virtualbox-guest-utils
 		;;
-    	3)
+    		3)
 			echo "## installing intel"
 			sudo pacman -S xf86-video-intel
 		;;
-    	4)
+    		4)
 			echo "## installing catalyst"
 
 			if ! grep -q "\[catalyst\]" /etc/pacman.conf ; then
@@ -115,6 +116,10 @@ install_video_drivers() {
 			# sudo aticonfig --initial
 			# sudo aticonfig --initial=dual-head --screen-layout=right
 			# sudo aticonfig --tls=off
+		;;
+	    	5)
+			echo "## installing foss amd"
+			sudo pacman -S xf86-video-ati
 		;;
 	esac	
 }
