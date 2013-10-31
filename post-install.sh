@@ -143,7 +143,7 @@ install_desktop_environment() {
 			echo "exec startxfce4" > ~/.xinitrc
 		;;
 		3)
-			sudo pacman -S cinnamon gedit gnome-terminal file-roller
+			sudo pacman -S cinnamon gedit gnome-terminal file-roller evince
 			echo "exec cinnamon-session" > ~/.xinitrc
 		;;
 	esac
