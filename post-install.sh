@@ -129,6 +129,7 @@ install_desktop_environment() {
 	"1" "gnome" \
 	"2" "xfce" \
 	"3" "cinnamon" \
+	"4" "MATE" \
 	3>&1 1>&2 2>&3) in
 		1)
 			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-shell-extensions
@@ -145,6 +146,13 @@ install_desktop_environment() {
 		3)
 			sudo pacman -S cinnamon gedit gnome-terminal file-roller evince eog
 			echo "exec cinnamon-session" > ~/.xinitrc
+		;;
+		4)
+			if ! grep -q "\[mate\]" /etc/pacman.conf ; then
+				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/$arch" | sudo tee --append /etc/pacman.conf
+			fi
+			sudo pacman -Syy mate
+			echo "exec mate-session" > ~/.xinitrc
 		;;
 	esac
 }
