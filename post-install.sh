@@ -332,6 +332,10 @@ install_gsettings() {
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding \"\<Ctrl\>\<Alt\>t\"
 }
 
+blacklist_mei_me() {
+	sudo rmmod mei_me
+	echo "blacklist mei_me" | sudo tee /etc/modprobe.d/mei.conf	
+}
 
 list_aur_pkgs() {
 	echo "## Listing packages from AUR"
