@@ -149,9 +149,10 @@ install_desktop_environment() {
 		;;
 		4)
 			if ! grep -q "\[mate\]" /etc/pacman.conf ; then
-				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/$arch" | sudo tee --append /etc/pacman.conf
+				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/\$arch" | sudo tee --append /etc/pacman.conf
+				sudo pacman -Syy
 			fi
-			sudo pacman -Syy mate
+			sudo pacman -S mate mate-extras
 			echo "exec mate-session" > ~/.xinitrc
 		;;
 	esac
@@ -196,7 +197,7 @@ install_desktop_applications() {
 	# whiptail checklist following	
 	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
 
-	sudo pacman -S guayadeque # clementine quodlibet
+	#sudo pacman -S guayadeque # clementine quodlibet
 	 
 	sudo pacman -S openssh ntfsprogs rsync p7zip unrar zip gparted minicom
 	 
