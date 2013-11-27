@@ -49,11 +49,6 @@ partition_disk() {
 		enable_trim=true
 	fi
 
-	enable_luks=false
-	if whiptail --yesno "encrypt root partition? (passphrase set later)" 8 40 ; then
-		enable_luks=true
-	fi
-
 	labelroot="arch-root"
 	labelswap="arch-swap"
 	labelboot="arch-boot"
@@ -62,11 +57,6 @@ partition_disk() {
 	partboot="/dev/disk/by-partlabel/$labelboot"
 
 	mountpoint="/mnt"
-
-	if $enable_luks ; then
-		maproot="croot"
-		mapswap="cswap"
-	fi
 
 	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
 	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
@@ -94,9 +84,15 @@ format_disk() {
 	echo "## mkfs $partboot"
 	mkfs.ext4 $partboot
 
-	if $enable_luks ; then
+	enable_luks=false
+	if whiptail --yesno "encrypt root partition? (passphrase set later)" 8 40 ; then
+		enable_luks=true
+
+		maproot="croot"
+		mapswap="cswap"
+
 		echo "## encrypting $partroot"
-		cryptsetup -c aes-xts-plain64 -y -s 512 -h sha512 -r luksFormat $partroot
+		cryptsetup --batch-mode --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $partroot
 		echo "## opening $partroot"
 		cryptsetup luksOpen $partroot $maproot
 		echo "## mkfs /dev/mapper/$maproot"
@@ -115,9 +111,11 @@ format_disk() {
 update_mirrorlist() {
 	echo "## attempting to download mirrorlist for country: ${country}"
 	mirrorlist_url="https://www.archlinux.org/mirrorlist/?country=${country}&use_mirror_status=on"
+
 	mirrorlist_tmp=$(mktemp --suffix=-mirrorlist)
 	curl -so ${mirrorlist_tmp} ${mirrorlist_url}
 	sed -i 's/^#Server/Server/g' ${mirrorlist_tmp}
+
 	if [[ -s ${mirrorlist_tmp} ]]; then
 		echo "## rotating the new list into place"
 		mv -i /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
@@ -128,6 +126,7 @@ update_mirrorlist() {
 		sed '/^#\S/ s|#||' -i /etc/pacman.d/mirrorlist.backup
 		rankmirrors --verbose -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
 	fi
+
 	chmod +r /etc/pacman.d/mirrorlist
 	nano /etc/pacman.d/mirrorlist
 }
@@ -145,7 +144,7 @@ configure_fstab(){
 		echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
 		echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	else
-		#udevadm info -q all -n $partswap | grep -i uuid | egrep "^S:" | grep "partuuid" | tail --bytes=37
+		#swap_uuid=$(udevadm info -q all -n $partswap | grep -i uuid | egrep "^S:" | grep "partuuid" | tail --bytes=37)
 		echo "$partswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	fi
 
