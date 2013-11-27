@@ -2,9 +2,10 @@
 
 command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
 
-net_connectivity() {
-	echo "## checking internet connectivity"
-	ping -c 2 www.google.com
+cehck_net_connectivity() {
+	echo "## checking net connectivity"
+	echo "## pinging openDNS"
+	ping -c 2 208.67.222.222
 	#ip route add default via <gw-ip>
 }
 
@@ -17,14 +18,16 @@ enable_ssh() {
 
 set_variables() {
 	echo "## defining variables for installation"
-	# cat /etc/locale.gen | grep -oP "^#\K[a-zA-Z0-9@._-]+"
-	new_uuid=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
 
+	# cat /etc/locale.gen | grep -oP "^#\K[a-zA-Z0-9@._-]+"
 	locale=$(whiptail --nocancel --inputbox "Set locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
+
 	keyboard=$(whiptail --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
 	zone=$(whiptail --nocancel --inputbox "Set zone:" 10 40 "Australia" 3>&1 1>&2 2>&3)
 	subzone=$(whiptail --nocancel --inputbox "Set subzone:" 10 40 "Melbourne" 3>&1 1>&2 2>&3)
 	country=$(whiptail --nocancel --inputbox "Set mirrorlist country code:" 10 40 "AU" 3>&1 1>&2 2>&3)
+
+	new_uuid=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 6 | head -n 1)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
 	username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
 }
@@ -41,15 +44,15 @@ partition_disk() {
 	disks=`parted --list | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
 	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
-	ENABLE_TRIM=false
+	enable_trim=false
 	if [ -n "$(hdparm -I ${DSK} 2>&1 | grep 'TRIM supported')" ]; then
 		echo "## detected TRIM support"
-		ENABLE_TRIM=true
+		enable_trim=true
 	fi
 
-	ENCRYPT_ROOT=false
+	enable_luks=false
 	if whiptail --yesno "encrypt root partition? (passphrase set later)" 8 40 ; then
-		ENCRYPT_ROOT=true
+		enable_luks=true
 	fi
 
 	labelroot="arch-root"
@@ -61,7 +64,7 @@ partition_disk() {
 
 	mountpoint="/mnt"
 
-	if $ENCRYPT_ROOT ; then
+	if $enable_luks ; then
 		maproot="croot"
 		mapswap="cswap"
 	fi
@@ -92,7 +95,7 @@ format_disk() {
 	echo "## mkfs $partboot"
 	mkfs.ext4 $partboot
 
-	if $ENCRYPT_ROOT ; then
+	if $enable_luks ; then
 		echo "## encrypting $partroot"
 		cryptsetup -c aes-xts-plain64 -y -s 512 -h sha512 -r luksFormat $partroot
 		echo "## opening $partroot"
@@ -139,17 +142,18 @@ configure_fstab(){
 	echo "## generating fstab entries"
 	genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
 
-	if $ENCRYPT_ROOT ; then
+	if $enable_luks ; then
 		echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
 		echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	else
+		#udevadm info -q all -n $partswap | grep -i uuid | egrep "^S:" | grep "partuuid"
 		echo "$partswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	fi
 
-	if $ENABLE_TRIM ; then
+	if $enable_trim ; then
 		echo "## adding trim support"
 		sed -i -e 's/defaults/defaults,discard/' $mountpoint/etc/fstab
-		if $ENCRYPT_ROOT ; then
+		if $enable_luks ; then
 			sed -i -e 's/rw,/discard,rw,/' $mountpoint/etc/fstab
 			sed -i -e 's/swap,/swap,discard,/' $mountpoint/etc/crypttab
 		fi
@@ -157,7 +161,7 @@ configure_fstab(){
 
 	nano $mountpoint/etc/fstab
 
-	if $ENCRYPT_ROOT ; then
+	if $enable_luks ; then
 		nano $mountpoint/etc/crypttab
 	fi
 }
@@ -173,12 +177,11 @@ configure_system(){
 	echo LANG=$locale > $mountpoint/etc/locale.conf
 	arch_chroot "export LANG=$locale"
 
-	if $ENCRYPT_ROOT ; then
+	if $enable_luks ; then
 		echo "## adding encrypt hook"
 		sed -i -e "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
+		arch_chroot "mkinitcpio -p linux"
 	fi
-
-	arch_chroot "mkinitcpio -p linux"
 
 	echo "## writing vconsole.conf"
 	echo "KEYMAP=$keyboard" > $mountpoint/etc/vconsole.conf
@@ -198,18 +201,21 @@ install_bootloader()
 	pacstrap -i $mountpoint grub
 	arch_chroot "grub-install --recheck ${DSK}"
 
-	if $ENCRYPT_ROOT ; then
+	if $enable_luks ; then
 		cryptdevice="cryptdevice=$partroot:$maproot"
 
-		if $ENABLE_TRIM ; then 
+		if $enable_trim ; then 
 			echo "## appending allow-discards for TRIM support"
 			cryptdevice+=":allow-discards"
 		fi
 		sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/default/grub
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
+	fi
 
-		nano $mountpoint/etc/default/grub
-		arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
+	nano $mountpoint/etc/default/grub
+	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
+
+	if $enable_luks ; then
 		whiptail --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
 	fi
 }
@@ -236,6 +242,8 @@ enable_autologin() {
 }
 
 install_network_daemon() {
+	enable_networkmanager=false
+
 	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
 	"1" "dhcpcd" \
 	"2" "NetworkManager" \
@@ -246,16 +254,22 @@ install_network_daemon() {
 		;;
     		2)
 			echo "## installing networkmanager"
-			pacstrap -i $mountpoint networkmanager networkmanager-dispatcher-ntpd
+			pacstrap -i $mountpoint networkmanager
 			arch_chroot "systemctl enable NetworkManager"
+			enable_networkmanager=true
 		;;
 	esac	
 }
 
 enable_ntpd() {
 	if whiptail --yesno "enable network time daemon?" 8 40 ; then
-		echo "## enabling network time"
+		echo "## enabling network time daemon"
 		pacstrap -i $mountpoint ntp
+
+		if $enable_networkmanager ; then
+			pacstrap -i $mountpoint networkmanager-dispatcher-ntpd
+		fi
+
 		arch_chroot "ntpd -q"
 		arch_chroot "hwclock -w"
 		arch_chroot "systemctl enable ntpd.service"
@@ -269,7 +283,7 @@ finish_setup() {
 		umount -l $mountpoint/boot
 		umount -l $mountpoint
 
-		if $ENCRYPT_ROOT ; then
+		if $enable_luks ; then
 			cryptsetup luksClose $maproot
 		fi
 
