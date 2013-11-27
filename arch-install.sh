@@ -48,7 +48,7 @@ partition_disk() {
 	fi
 
 	ENCRYPT_ROOT=false
-	if whiptail --yesno "encrypt root partition? (will ask for passphrase later)" 8 40 ; then
+	if whiptail --yesno "encrypt root partition? (passphrase set later)" 8 40 ; then
 		ENCRYPT_ROOT=true
 	fi
 
@@ -143,7 +143,7 @@ configure_fstab(){
 		echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
 		echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	else
-		echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
+		echo "$partswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	fi
 
 	if $ENABLE_TRIM ; then
@@ -163,7 +163,7 @@ configure_fstab(){
 }
 
 arch_chroot(){
-  arch-chroot $mountpoint /bin/bash -c "${1}"
+	arch-chroot $mountpoint /bin/bash -c "${1}"
 }
 
 configure_system(){
