@@ -115,14 +115,14 @@ format_disk() {
 
 update_mirrorlist() {
 	echo "## attempting to download mirrorlist for country: ${country}"
-	url="https://www.archlinux.org/mirrorlist/?country=${country}&use_mirror_status=on"
-	tmpfile=$(mktemp --suffix=-mirrorlist)
-	curl -so ${tmpfile} ${url}
-	sed -i 's/^#Server/Server/g' ${tmpfile}
-	if [[ -s ${tmpfile} ]]; then
+	mirrorlist_url="https://www.archlinux.org/mirrorlist/?country=${country}&use_mirror_status=on"
+	mirrorlist_tmp=$(mktemp --suffix=-mirrorlist)
+	curl -so ${mirrorlist_tmp} ${mirrorlist_url}
+	sed -i 's/^#Server/Server/g' ${mirrorlist_tmp}
+	if [[ -s ${mirrorlist_tmp} ]]; then
 		echo "## rotating the new list into place"
 		mv -i /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
-		mv -i ${tmpfile} /etc/pacman.d/mirrorlist
+		mv -i ${mirrorlist_tmp} /etc/pacman.d/mirrorlist
 	else
 		echo "## could not download list, ranking original mirrorlist"
 		cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
@@ -146,7 +146,7 @@ configure_fstab(){
 		echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
 		echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	else
-		#udevadm info -q all -n $partswap | grep -i uuid | egrep "^S:" | grep "partuuid"
+		#udevadm info -q all -n $partswap | grep -i uuid | egrep "^S:" | grep "partuuid" | tail --bytes=37
 		echo "$partswap none swap defaults 0 0" >> $mountpoint/etc/fstab
 	fi
 
