@@ -56,8 +56,6 @@ partition_disk() {
 	partswap="/dev/disk/by-partlabel/$labelswap"
 	partboot="/dev/disk/by-partlabel/$labelboot"
 
-	mountpoint="/mnt"
-
 	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
 	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
 	boot_end=$(( 2 + 500 ))
@@ -83,6 +81,8 @@ partition_disk() {
 format_disk() {
 	echo "## mkfs $partboot"
 	mkfs.ext4 $partboot
+
+	mountpoint="/mnt"
 
 	enable_luks=false
 	if whiptail --yesno "encrypt root partition? (passphrase set later)" 8 40 ; then
@@ -133,7 +133,7 @@ update_mirrorlist() {
 
 install_base(){
 	echo "## installing base system"
-	pacstrap -i $mountpoint base base-devel openssh libnewt wget
+	pacstrap $mountpoint base base-devel openssh libnewt wget
 }
 
 configure_fstab(){
@@ -196,7 +196,7 @@ configure_system(){
 install_bootloader()
 {
 	echo "## installing grub to ${DSK}"
-	pacstrap -i $mountpoint grub
+	pacstrap $mountpoint grub
 	arch_chroot "grub-install --recheck ${DSK}"
 
 	if $enable_luks ; then
@@ -220,7 +220,7 @@ install_bootloader()
 
 create_user() {
 	echo "## adding user: $username"
-	pacstrap -i $mountpoint sudo
+	pacstrap $mountpoint sudo
 	arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage -s /bin/bash $username"
 	echo "## set password for user: $username"
 	arch_chroot "passwd $username"
@@ -252,7 +252,7 @@ install_network_daemon() {
 		;;
     		2)
 			echo "## installing networkmanager"
-			pacstrap -i $mountpoint networkmanager
+			pacstrap $mountpoint networkmanager
 			arch_chroot "systemctl enable NetworkManager"
 			enable_networkmanager=true
 		;;
@@ -262,10 +262,10 @@ install_network_daemon() {
 enable_ntpd() {
 	if whiptail --yesno "enable network time daemon?" 8 40 ; then
 		echo "## enabling network time daemon"
-		pacstrap -i $mountpoint ntp
+		pacstrap $mountpoint ntp
 
 		if $enable_networkmanager ; then
-			pacstrap -i $mountpoint networkmanager-dispatcher-ntpd
+			pacstrap $mountpoint networkmanager-dispatcher-ntpd
 		fi
 
 		arch_chroot "ntpd -q"
