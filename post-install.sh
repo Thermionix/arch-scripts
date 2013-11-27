@@ -153,18 +153,10 @@ install_desktop_environment() {
 				sudo pacman -Syy
 			fi
 			sudo pacman -S mate mate-extras
+			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
 		;;
 	esac
-}
-
-install_network_manager() {
-	echo "## Installing NetworkManager"
-	sudo pacman -S networkmanager networkmanager-dispatcher-ntpd #network-manager-applet 
-	sudo systemctl disable dhcpcd
-	sudo systemctl stop dhcpcd
-	sudo systemctl enable NetworkManager
-	sudo systemctl start NetworkManager
 }
 
 install_fonts() {
@@ -205,7 +197,12 @@ install_desktop_applications() {
 
 	sudo pacman -S mtpfs gvfs-smb exfat-utils fuse-exfat git
 
-	# samba btsync
+	# samba
+	#sudo pacaur -S btsync
+	#sudo pacaur -S btsyncindicator
+	#sudo pacaur -S docker-lxc-nightly
+	#sudo pacman -S libreoffice
+	#sudo pacman -S synergy
 }
 
 install_laptop_mode() {
@@ -335,6 +332,10 @@ install_gsettings() {
 blacklist_mei_me() {
 	sudo rmmod mei_me
 	echo "blacklist mei_me" | sudo tee /etc/modprobe.d/mei.conf	
+}
+
+disable_root_login() {
+	passwd -l root
 }
 
 list_aur_pkgs() {

@@ -172,43 +172,66 @@ nano $mountpoint/etc/default/grub
 arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 whiptail --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
 
-echo "## adding user: $username"
-pacstrap -i $mountpoint sudo
-arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage -s /bin/bash $username"
-echo "## set password for user: $username"
-arch_chroot "passwd $username"
-sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
-#echo "## disabling root login"
-#arch_chroot "passwd -l root"
+create_user() {
+	echo "## adding user: $username"
+	pacstrap -i $mountpoint sudo
+	arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage -s /bin/bash $username"
+	echo "## set password for user: $username"
+	arch_chroot "passwd $username"
+	sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
+}
 
-if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
-	echo "## enabling autologin for user: $username"
-	mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
-	pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
-	echo "[Service]" > autologin.conf
-	echo "ExecStart=" >> autologin.conf
-	echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
-	popd
-fi
+enable_autologin() {
+	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
+		echo "## enabling autologin for user: $username"
+		mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
+		pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
+		echo "[Service]" > autologin.conf
+		echo "ExecStart=" >> autologin.conf
+		echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
+		popd
+	fi
+}
 
-if whiptail --yesno "enable dhcpcd?" 8 40 ; then
-	echo "## enabling dhcpcd"
-	arch_chroot "systemctl enable dhcpcd.service"
-	## handle wifi?
-fi
+install_network_daemon() {
+	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
+	"1" "dhcpcd" \
+	"2" "NetworkManager" \
+	3>&1 1>&2 2>&3) in
+		1)
+			echo "## enabling dhcpcd"
+			arch_chroot "systemctl enable dhcpcd.service"
+		;;
+    		2)
+			echo "## Installing NetworkManager"
+			pacstrap -i $mountpoint networkmanager networkmanager-dispatcher-ntpd
+			arch_chroot "systemctl enable NetworkManager"
+		;;
+	esac	
+}
 
-if whiptail --yesno "enable network time?" 8 40 ; then
-	echo "## enabling network time"
-	pacstrap -i $mountpoint ntp
-	arch_chroot "ntpd -q"
-	arch_chroot "hwclock -w"
-	arch_chroot "systemctl enable ntpd.service"
-fi
+enable_ntpd() {
+	if whiptail --yesno "enable network time?" 8 40 ; then
+		echo "## enabling network time"
+		pacstrap -i $mountpoint ntp
+		arch_chroot "ntpd -q"
+		arch_chroot "hwclock -w"
+		arch_chroot "systemctl enable ntpd.service"
+	fi
+}
 
-if whiptail --yesno "Reboot now?" 8 40 ; then
-	echo "## unmounting and rebooting"
-	umount -l $mountpoint/boot
-	umount -l $mountpoint
-	cryptsetup luksClose $maproot
-	reboot
-fi
+finish_setup() {
+	if whiptail --yesno "Reboot now?" 8 40 ; then
+		echo "## unmounting and rebooting"
+		umount -l $mountpoint/boot
+		umount -l $mountpoint
+		cryptsetup luksClose $maproot
+		reboot
+	fi
+}
+
+create_user
+enable_autologin
+install_network_daemon
+enable_ntpd
+finish_setup
