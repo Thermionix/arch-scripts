@@ -4,8 +4,7 @@ command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script
 
 cehck_net_connectivity() {
 	echo "## checking net connectivity"
-	echo "## pinging openDNS"
-	ping -c 2 208.67.222.222
+	ping -c 2 resolver1.opendns.com
 	#ip route add default via <gw-ip>
 }
 
@@ -82,7 +81,7 @@ partition_disk() {
 	parted -s ${DSK} -a optimal unit MB mkpart primary 2 $boot_end
 	parted -s ${DSK} name 2 $labelboot
 	echo "## creating partition $labelswap"
-	parted -s ${DSK} -a optimal unit MB mkpart primary $boot_end $swap_end
+	parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
 	parted -s ${DSK} name 3 $labelswap
 	echo "## creating partition $labelroot"
 	parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
