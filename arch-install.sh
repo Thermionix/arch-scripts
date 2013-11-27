@@ -28,7 +28,6 @@ set_variables() {
 
 	new_uuid=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 6 | head -n 1)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
-	username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
 }
 
 update_locale() {
@@ -85,7 +84,7 @@ format_disk() {
 	mountpoint="/mnt"
 
 	enable_luks=false
-	if whiptail --yesno "encrypt root partition? (passphrase set later)" 8 40 ; then
+	if whiptail --yesno "encrypt root partition?" 8 40 ; then
 		enable_luks=true
 
 		maproot="croot"
@@ -219,23 +218,14 @@ install_bootloader()
 }
 
 create_user() {
-	echo "## adding user: $username"
-	pacstrap $mountpoint sudo
-	arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage -s /bin/bash $username"
-	echo "## set password for user: $username"
-	arch_chroot "passwd $username"
-	sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
-}
-
-enable_autologin() {
-	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
-		echo "## enabling autologin for user: $username"
-		mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
-		pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
-		echo "[Service]" > autologin.conf
-		echo "ExecStart=" >> autologin.conf
-		echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
-		popd
+	if whiptail --yesno "create a user for this installation?" 8 40 ; then
+		username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
+		echo "## adding user: $username"
+		pacstrap $mountpoint sudo
+		arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage -s /bin/bash $username"
+		echo "## set password for user: $username"
+		arch_chroot "passwd $username"
+		sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 	fi
 }
 
@@ -300,7 +290,6 @@ configure_fstab
 configure_system
 install_bootloader
 create_user
-enable_autologin
 install_network_daemon
 enable_ntpd
 finish_setup

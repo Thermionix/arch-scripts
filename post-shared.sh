@@ -7,6 +7,19 @@ check_notroot() {
 	fi
 }
 
+enable_autologin() {
+	username=`whoami`
+	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
+		echo "## enabling autologin for user: $username"
+		mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
+		pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
+		echo "[Service]" > autologin.conf
+		echo "ExecStart=" >> autologin.conf
+		echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
+		popd
+	fi
+}
+
 check_whiptail() {
 	`command -v whiptail >/dev/null 2>&1 || { echo "whiptail (pkg libnewt) required for this script" >&2 ; sudo pacman -S libnewt ; }`
 }
