@@ -10,7 +10,7 @@ cehck_net_connectivity() {
 
 enable_ssh() {
 	systemctl start sshd 
-	echo "## set passwd for login with ssh root@hostname"
+	echo "## set passwd for login with ssh root@<ip>"
 	passwd
 	ip addr | grep "inet"
 }
@@ -26,7 +26,7 @@ set_variables() {
 	subzone=$(whiptail --nocancel --inputbox "Set subzone:" 10 40 "Melbourne" 3>&1 1>&2 2>&3)
 	country=$(whiptail --nocancel --inputbox "Set mirrorlist country code:" 10 40 "AU" 3>&1 1>&2 2>&3)
 
-	new_uuid=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 6 | head -n 1)
+	new_uuid=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 6 | head -n 1)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
 	username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
 }
@@ -133,7 +133,7 @@ update_mirrorlist() {
 
 install_base(){
 	echo "## installing base system"
-	pacstrap $mountpoint base base-devel openssh libnewt wget
+	pacstrap $mountpoint base base-devel
 }
 
 configure_fstab(){
@@ -275,6 +275,7 @@ enable_ntpd() {
 }
 
 finish_setup() {
+	# offer to just umount | reboot | poweroff | do nothing
 	if whiptail --yesno "Reboot now?" 8 40 ; then
 		echo "## unmounting and rebooting"
 
