@@ -225,7 +225,9 @@ install_desktop_applications() {
 
 	sudo pacman -S mtpfs gvfs-smb exfat-utils fuse-exfat git
 
-	# samba openssh
+	sudo pacman -S steam
+
+	# samba openssh tmux
 	#sudo pacaur -S btsync
 	#sudo pacaur -S btsyncindicator
 	#sudo pacaur -S docker-lxc-nightly
@@ -265,10 +267,6 @@ install_pacman_gui() {
 	#pacman-notifier &
 	#pacman -S pacupdate
 	#pacupdate &
-}
-
-install_steam() {
-	sudo pacman -S steam
 }
 
 install_gaming_tweaks() {

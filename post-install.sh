@@ -27,7 +27,7 @@ options=(
 13 "Pulseaudio" off
 14 "Enable X autostart" off
 15 "Gsettings" off
-16 "Steam and gaming tweaks" off
+16 "autologin" off
 17 "Laptop mode" off
 18 "List AUR PKGs" off
 19 "reboot" off
@@ -83,7 +83,7 @@ do
 			install_gsettings
 		;;
 		16)
-			install_steam
+			enable_autologin
 		;;
 		17)
 			install_laptop_mode

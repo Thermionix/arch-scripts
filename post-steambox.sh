@@ -18,32 +18,30 @@ install_xorg
 install_video_drivers
 install_xbmc
 install_fonts
-install_steam
 install_grub_holdshift
 
+sudo pacman -S steam xterm
 sudo pacman -S wmctrl
 
 #disable_root_login
 
 # add xbmc menu item?
 # <onclick>XBMC.System.Exec(/usr/bin/firefox)</onclick>
+# firefox.sh /usr/bin/xinit /usr/bin/firefox -- :0 -nolisten tcp
 
 pacaur -S xbmc-addon-steam-launcher
+#pacaur -S retroarch-phoenix-git
+
 # add xbmc-addon-steam-launcher to menu?
 
-if sudo [ ! -f /etc/polkit-1/rules.d/10-xbmc.rules ] ; then
-cat << EOF | sudo tee /etc/polkit-1/rules.d/10-xbmc.rules
-polkit.addRule(function(action, subject) {
-	if(action.id.match("org.freedesktop.login1.") && subject.isInGroup("power")) {
-	    return polkit.Result.YES;
-	}
-});
+#<item id="12">
+#<label>Firefox</label>
+#<onclick>XBMC.System.Exec(/usr/bin/firefox)</onclick>
+#<icon>special://skin/backgrounds/firefox.jpg</icon>
+#</item>
 
-polkit.addRule(function(action, subject) {
-	if (action.id.indexOf("org.freedesktop.udisks") == 0 && subject.isInGroup("storage")) {
-	    return polkit.Result.YES;
-	}
-});
-EOF
-fi
+# /usr/bin/steam -bigpicture
+# /usr/bin/xinit /usr/bin/steam "-bigpicture" -- :1 -nolisten tcp
+
+
 
