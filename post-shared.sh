@@ -21,7 +21,7 @@ enable_autologin() {
 }
 
 check_whiptail() {
-	`command -v whiptail >/dev/null 2>&1 || { echo "whiptail (pkg libnewt) required for this script" >&2 ; sudo pacman -S libnewt ; }`
+	`command -v whiptail >/dev/null 2>&1 || { echo "whiptail (pkg libnewt) required for this script" >&2 ; sudo pacman -Sy libnewt ; }`
 }
 
 install_xbmc() {
@@ -217,8 +217,6 @@ install_desktop_applications() {
 	# whiptail checklist following	
 	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
 
-	#sudo pacman -S guayadeque # clementine quodlibet
-	 
 	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted minicom
 	 
 	sudo pacman -S mumble gimp minitube midori bleachbit youtube-dl python-pip
@@ -227,7 +225,7 @@ install_desktop_applications() {
 
 	sudo pacman -S steam
 
-	# samba openssh tmux
+	# samba openssh tmux banshee quodlibet brasero
 	#sudo pacaur -S btsync
 	#sudo pacaur -S btsyncindicator
 	#sudo pacaur -S docker-lxc-nightly

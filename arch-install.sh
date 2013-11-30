@@ -145,9 +145,6 @@ configure_fstab(){
 	if $enable_luks ; then
 		echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
 		echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
-	#else
-	#	swap_uuid=$(udevadm info -q all -n $partswap | grep -i uuid | egrep "^S:" | grep "partuuid" | tail --bytes=37)
-	#	echo "UUID=$swap_uuid none swap defaults 0 0" >> $mountpoint/etc/fstab
 	fi
 
 	if $enable_trim ; then
