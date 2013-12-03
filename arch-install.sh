@@ -84,7 +84,7 @@ format_disk() {
 	mountpoint="/mnt"
 
 	enable_luks=false
-	if whiptail --yesno "encrypt root and swap partitions?" 8 40 ; then
+	if whiptail --defaultno --yesno "encrypt root and swap partitions?" 8 40 ; then
 		enable_luks=true
 
 		maproot="croot"

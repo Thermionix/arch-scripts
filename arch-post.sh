@@ -24,11 +24,6 @@ check_whiptail() {
 	`command -v whiptail >/dev/null 2>&1 || { echo "whiptail (pkg libnewt) required for this script" >&2 ; sudo pacman -Sy libnewt ; }`
 }
 
-install_xbmc() {
-	sudo pacman -S xbmc unrar upower udisks pulseaudio # lirc
-	sudo systemctl enable xbmc
-}
-
 enable_ssh(){
 	sudo pacman -S openssh
 	sudo systemctl enable sshd.service
@@ -106,7 +101,10 @@ install_video_drivers() {
     		3)
 			echo "## installing intel"
 			sudo pacman -S xf86-video-intel
-			# lib32-intel-dri
+
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S lib32-intel-dri
+			fi
 		;;
     		4)
 			echo "## installing catalyst"
@@ -153,6 +151,43 @@ install_video_drivers() {
 	esac	
 }
 
+install_fonts() {
+	echo "## Installing Fonts"
+	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
+	sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
+	whiptail --yesno "Install ttf-ms-fonts?" 8 40 && { pacaur -S ttf-ms-fonts ; }
+}
+
+install_grub_holdshift() {
+	echo "## Installing grub-holdshift"
+
+	pacaur -S grub-holdshift
+	 
+	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
+		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
+	fi
+	 
+	sudo grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+install_pulse_audio() {
+	echo "## Installing PulseAudio"
+	sudo pacman -S pulseaudio pulseaudio-alsa pavucontrol
+}
+
+disable_root_login() {
+	passwd -l root
+}
+
+
+install_x_autostart() {
+	echo "## Installing X Autostart"
+	if ! grep -q "exec startx" ~/.bash_profile ; then 
+		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
+		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
+	fi
+}
+
 install_desktop_environment() {
 	case $(whiptail --menu "Choose a Desktop Environment" 20 60 12 \
 	"1" "gnome" \
@@ -186,13 +221,6 @@ install_desktop_environment() {
 			echo "exec mate-session" > ~/.xinitrc
 		;;
 	esac
-}
-
-install_fonts() {
-	echo "## Installing Fonts"
-	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
-	sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
-	whiptail --yesno "Install ttf-ms-fonts?" 8 40 && { pacaur -S ttf-ms-fonts ; }
 }
 
 install_scanning() {
@@ -289,31 +317,6 @@ install_wine() {
 	rm ~/.local/share/applications/wine-extension*
 }
 
-install_grub_holdshift() {
-	echo "## Installing grub-holdshift"
-
-	pacaur -S grub-holdshift
-	 
-	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
-		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
-	fi
-	 
-	sudo grub-mkconfig -o /boot/grub/grub.cfg
-}
-
-install_x_autostart() {
-	echo "## Installing X Autostart"
-	if ! grep -q "exec startx" ~/.bash_profile ; then 
-		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
-		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
-	fi
-}
-
-install_pulse_audio() {
-	echo "## Installing PulseAudio"
-	sudo pacman -S pulseaudio pulseaudio-alsa pavucontrol
-}
-
 install_printing() {
 	echo "## Installing Printing"
 	sudo pacman -S cups cups-filters foomatic-filters ghostscript gsfonts system-config-printer
@@ -364,11 +367,98 @@ blacklist_mei_me() {
 	echo "blacklist mei_me" | sudo tee /etc/modprobe.d/mei.conf	
 }
 
-disable_root_login() {
-	passwd -l root
-}
-
 list_aur_pkgs() {
 	echo "## Listing packages from AUR"
 	sudo pacman -Qm | awk '{print $1}' | less
 }
+
+check_notroot
+check_whiptail
+
+cmd=(whiptail --separate-output --checklist "Select options:" 22 60 16)
+options=(
+1 "AUR Helper" off
+2 "enable multilib repository" off
+3 "Xorg" off
+4 "Video Drivers" off
+5 "Desktop Environment" off
+6 "Network Manager" off
+7 "Fonts" off
+8 "Desktop Applications" off
+9 "Wine" off
+10 "grub-holdshift" off
+11 "Printing" off
+12 "Scanning" off
+13 "Pulseaudio" off
+14 "Enable X autostart" off
+15 "Gsettings" off
+16 "autologin" off
+17 "Laptop mode" off
+18 "List AUR PKGs" off
+19 "reboot" off
+)
+choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+
+for choice in $choices
+do
+    case $choice in
+		1)
+			install_aur_helper
+		;;
+		2)
+			install_multilib_repo
+		;;
+		3)
+			install_xorg
+		;;
+		4)
+			install_video_drivers
+		;;
+		5)
+			install_desktop_environment
+		;;
+		6)
+			install_network_manager
+		;;
+		7)
+			install_fonts
+		;;
+		8)
+			install_desktop_applications
+		;;
+		9)
+			install_wine
+		;;
+		10)
+			install_grub_holdshift
+		;;
+		11)
+			install_printing
+		;;
+		12)
+			install_scanning
+		;;
+		13)
+			install_pulse_audio
+		;;
+		14)
+			install_x_autostart
+		;;
+		15)
+			install_gsettings
+		;;
+		16)
+			enable_autologin
+		;;
+		17)
+			install_laptop_mode
+		;;
+		18)
+			list_aur_pkgs
+		;;
+		19)
+			sudo reboot
+		;;
+    esac
+done
+
