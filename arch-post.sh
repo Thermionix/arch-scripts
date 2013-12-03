@@ -7,19 +7,6 @@ check_notroot() {
 	fi
 }
 
-enable_autologin() {
-	username=`whoami`
-	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
-		echo "## enabling autologin for user: $username"
-		mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
-		pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
-		echo "[Service]" > autologin.conf
-		echo "ExecStart=" >> autologin.conf
-		echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
-		popd
-	fi
-}
-
 check_whiptail() {
 	`command -v whiptail >/dev/null 2>&1 || { echo "whiptail (pkg libnewt) required for this script" >&2 ; sudo pacman -Sy libnewt ; }`
 }
@@ -86,19 +73,21 @@ install_video_drivers() {
 	case $(whiptail --menu "Choose a video driver" 20 60 12 \
 	"1" "vesa (generic)" \
 	"2" "virtualbox" \
-	"3" "intel" \
-	"4" "catalyst" \
-	"5" "foss amd" \
+	"3" "Intel" \
+	"4" "AMD proprietary (catalyst)" \
+	"5" "AMD open-source" \
+	"6" "NVIDIA open-source (nouveau)" \
+	"7" "NVIDIA proprietary" \
 	3>&1 1>&2 2>&3) in
 		1)
 			echo "## installing vesa"
 			sudo pacman -S xf86-video-vesa
 		;;
-    		2)
+		2)
 			echo "## installing virtualbox"
 			sudo pacman -S virtualbox-guest-utils
 		;;
-    		3)
+		3)
 			echo "## installing intel"
 			sudo pacman -S xf86-video-intel
 
@@ -106,8 +95,8 @@ install_video_drivers() {
 				sudo pacman -S lib32-intel-dri
 			fi
 		;;
-    		4)
-			echo "## installing catalyst"
+		4)
+			echo "## installing AMD proprietary (catalyst)"
 
 			if ! grep -q "\[catalyst\]" /etc/pacman.conf ; then
 				echo -e "\n[catalyst]\nInclude = /etc/pacman.d/catalyst" | sudo tee --append /etc/pacman.conf
@@ -144,9 +133,23 @@ install_video_drivers() {
 			# sudo aticonfig --initial=dual-head --screen-layout=right
 			# sudo aticonfig --tls=off
 		;;
-	    	5)
-			echo "## installing foss amd"
+    	5)
+			echo "## installing AMD open-source"
 			sudo pacman -S xf86-video-ati
+		;;
+		6)
+			echo "## installing NVIDIA open-source (nouveau)"
+			sudo pacman -S xf86-video-nouveau
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S lib32-nouveau-dri
+			fi
+		;;
+		7)
+			echo "## installing NVIDIA proprietary"
+			sudo pacman -S nvidia
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S lib32-nvidia-libgl
+			fi
 		;;
 	esac	
 }
@@ -179,6 +182,19 @@ disable_root_login() {
 	passwd -l root
 }
 
+
+enable_autologin() {
+	username=`whoami`
+	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
+		echo "## enabling autologin for user: $username"
+		mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
+		pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
+		echo "[Service]" > autologin.conf
+		echo "ExecStart=" >> autologin.conf
+		echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
+		popd
+	fi
+}
 
 install_x_autostart() {
 	echo "## Installing X Autostart"
