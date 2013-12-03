@@ -106,6 +106,7 @@ install_video_drivers() {
     		3)
 			echo "## installing intel"
 			sudo pacman -S xf86-video-intel
+			# lib32-intel-dri
 		;;
     		4)
 			echo "## installing catalyst"
@@ -221,9 +222,11 @@ install_desktop_applications() {
 	 
 	sudo pacman -S mumble gimp minitube midori bleachbit youtube-dl python-pip
 
-	sudo pacman -S mtpfs gvfs-smb exfat-utils fuse-exfat git
+	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git
 
 	sudo pacman -S steam
+
+	pacaur -S android-udev
 
 	# samba openssh tmux banshee quodlibet brasero
 	#sudo pacaur -S btsync

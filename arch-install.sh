@@ -223,7 +223,7 @@ create_user() {
 		username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
 		echo "## adding user: $username"
 		pacstrap $mountpoint sudo
-		arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage -s /bin/bash $username"
+		arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
 		echo "## set password for user: $username"
 		arch_chroot "passwd $username"
 		sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
