@@ -194,12 +194,8 @@ enable_autologin() {
 	username=`whoami`
 	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
 		echo "## enabling autologin for user: $username"
-		mkdir $mountpoint/etc/systemd/system/getty@tty1.service.d
-		pushd $mountpoint/etc/systemd/system/getty@tty1.service.d/
-		echo "[Service]" > autologin.conf
-		echo "ExecStart=" >> autologin.conf
-		echo "ExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" >> autologin.conf
-		popd
+		sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" | sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
 	fi
 }
 
