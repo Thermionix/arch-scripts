@@ -39,6 +39,11 @@ update_locale() {
 }
 
 partition_disk() {
+	if whiptail --yesno "setup bcache (ssd cache for slower disk)?" 8 40 ; then
+		
+
+	fi
+
 	disks=`parted --list | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
 	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
