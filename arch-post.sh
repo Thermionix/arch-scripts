@@ -67,6 +67,10 @@ install_multilib_repo() {
 install_xorg() {
 	echo "## Installing Xorg"
 	sudo pacman -S xorg-server xorg-server-utils xorg-xinit mesa
+	sudo pacman -S libtxc_dxtn
+	if [[ `uname -m` == x86_64 ]]; then
+		sudo pacman -S lib32-libtxc_dxtn
+	fi
 }
 
 install_video_drivers() {
@@ -110,7 +114,6 @@ install_video_drivers() {
 			sudo pacman -Syy
 			 
 			sudo pacman -S --needed base-devel linux-headers mesa-demos qt4
-			sudo pacman -S libtxc_dxtn lib32-libtxc_dxtn
 			 
 			sudo pacman -S catalyst-hook catalyst-utils
 
@@ -133,7 +136,7 @@ install_video_drivers() {
 			# sudo aticonfig --initial=dual-head --screen-layout=right
 			# sudo aticonfig --tls=off
 		;;
-    	5)
+	    	5)
 			echo "## installing AMD open-source"
 			sudo pacman -S xf86-video-ati
 		;;
@@ -151,7 +154,7 @@ install_video_drivers() {
 				sudo pacman -S lib32-nvidia-libgl
 			fi
 		;;
-	esac	
+	esac
 }
 
 install_fonts() {
@@ -169,13 +172,17 @@ install_grub_holdshift() {
 	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
 		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
 	fi
+	sudo sed -i -e '/GRUB_TIMEOUT/s/5/0/' /etc/default/grub
 	 
 	sudo grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 install_pulse_audio() {
 	echo "## Installing PulseAudio"
-	sudo pacman -S pulseaudio pulseaudio-alsa pavucontrol
+	sudo pacman -S pulseaudio pulseaudio-alsa
+	if [[ `uname -m` == x86_64 ]]; then
+		sudo pacman -S lib32-libpulse lib32-alsa-plugins
+	fi
 }
 
 disable_root_login() {
@@ -268,11 +275,9 @@ install_desktop_applications() {
 
 	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git
 
-	sudo pacman -S steam
+	pacaur -S gvfs-mtp # android-udev
 
-	pacaur -S android-udev
-
-	# samba openssh tmux banshee quodlibet brasero
+	# samba openssh tmux banshee quodlibet brasero pavucontrol
 	#sudo pacaur -S btsync
 	#sudo pacaur -S btsyncindicator
 	#sudo pacaur -S docker-lxc-nightly
@@ -315,6 +320,7 @@ install_pacman_gui() {
 }
 
 install_gaming_tweaks() {
+	sudo pacman -S steam
 	pacaur -S sdl-nokeyboardgrab
 	echo "options usbhid mousepoll=2" | sudo tee /etc/modprobe.d/mousepolling.conf
 }

@@ -210,6 +210,8 @@ install_bootloader()
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
 	fi
 
+	# check append GRUB_DISABLE_SUBMENU=y
+
 	nano $mountpoint/etc/default/grub
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
