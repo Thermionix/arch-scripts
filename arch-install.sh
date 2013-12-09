@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
 
 cehck_net_connectivity() {
@@ -39,11 +40,6 @@ update_locale() {
 }
 
 partition_disk() {
-	if whiptail --yesno "setup bcache (ssd cache for slower disk)?" 8 40 ; then
-		
-
-	fi
-
 	disks=`parted --list | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
 	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
@@ -215,7 +211,9 @@ install_bootloader()
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
 	fi
 
-	# check append GRUB_DISABLE_SUBMENU=y
+	if ! grep -q "GRUB_DISABLE_SUBMENU=y" /etc/default/grub ; then
+		echo -e "\nGRUB_DISABLE_SUBMENU=y" | sudo tee --append /etc/default/grub
+	fi
 
 	nano $mountpoint/etc/default/grub
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
@@ -241,18 +239,18 @@ install_network_daemon() {
 	enable_networkmanager=false
 
 	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
-	"1" "dhcpcd" \
-	"2" "NetworkManager" \
+	"1" "NetworkManager" \
+	"2" "dhcpcd" \
 	3>&1 1>&2 2>&3) in
 		1)
-			echo "## enabling dhcpcd"
-			arch_chroot "systemctl enable dhcpcd.service"
-		;;
-    		2)
 			echo "## installing networkmanager"
 			pacstrap $mountpoint networkmanager
 			arch_chroot "systemctl enable NetworkManager"
 			enable_networkmanager=true
+		;;
+    	2)
+			echo "## enabling dhcpcd"
+			arch_chroot "systemctl enable dhcpcd.service"
 		;;
 	esac	
 }
@@ -273,7 +271,7 @@ enable_ntpd() {
 }
 
 finish_setup() {
-	# offer to just umount | reboot | poweroff | do nothing
+	# offer to umount | reboot | poweroff | do nothing
 	if whiptail --yesno "Reboot now?" 8 40 ; then
 		echo "## unmounting and rebooting"
 
