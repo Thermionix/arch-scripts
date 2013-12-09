@@ -211,8 +211,8 @@ install_bootloader()
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
 	fi
 
-	if ! grep -q "GRUB_DISABLE_SUBMENU=y" /etc/default/grub ; then
-		echo -e "\nGRUB_DISABLE_SUBMENU=y" | sudo tee --append /etc/default/grub
+	if ! grep -q "GRUB_DISABLE_SUBMENU=y" $mountpoint/etc/default/grub ; then
+		echo -e "\nGRUB_DISABLE_SUBMENU=y" | sudo tee --append $mountpoint/etc/default/grub
 	fi
 
 	nano $mountpoint/etc/default/grub
