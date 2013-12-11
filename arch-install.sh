@@ -241,6 +241,7 @@ install_network_daemon() {
 	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
 	"1" "NetworkManager" \
 	"2" "dhcpcd" \
+	"3" "bonding (netctl)" \
 	3>&1 1>&2 2>&3) in
 		1)
 			echo "## installing networkmanager"
@@ -252,6 +253,13 @@ install_network_daemon() {
 			echo "## enabling dhcpcd"
 			arch_chroot "systemctl enable dhcpcd.service"
 		;;
+		3)
+			echo "#installing netctl"
+			pacstrap $mountpoint netctl ifenslave
+			cp $mountpoint/etc/netctl/examples/bonding $mountpoint/etc/netctl/bonding
+			# append interface names in comment into $mountpoint/etc/netctl/bonding
+			nano $mountpoint/etc/netctl/bonding
+			#arch_chroot "netctl enable profile"
 	esac	
 }
 

@@ -164,6 +164,10 @@ install_fonts() {
 	whiptail --yesno "Install ttf-ms-fonts?" 8 40 && { pacaur -S ttf-ms-fonts ; }
 }
 
+improve_readability() {
+	pacaur -S cope-git
+}
+
 install_grub_holdshift() {
 	echo "## Installing grub-holdshift"
 
@@ -189,6 +193,10 @@ disable_root_login() {
 	passwd -l root
 }
 
+install_enhanceio() {
+	pacaur -S enhanceio-dkms-git
+
+}
 
 enable_autologin() {
 	username=`whoami`
@@ -205,6 +213,11 @@ install_x_autostart() {
 		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
 		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
 	fi
+}
+
+cryptocurrency() {
+	pacman -S opencl-catalyst cgminer
+
 }
 
 install_desktop_environment() {
@@ -238,6 +251,7 @@ install_desktop_environment() {
 			sudo pacman -S mate mate-extras
 			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
+			sudo pacman -S netork-manager-applet
 		;;
 	esac
 }
@@ -273,10 +287,9 @@ install_desktop_applications() {
 
 	pacaur -S gvfs-mtp # android-udev
 
-	# samba openssh tmux banshee quodlibet brasero pavucontrol
+	# samba openssh tmux banshee quodlibet brasero pavucontrol docker meld
 	#sudo pacaur -S btsync
 	#sudo pacaur -S btsyncindicator
-	#sudo pacaur -S docker-lxc-nightly
 	#sudo pacman -S libreoffice
 	#sudo pacman -S synergy
 }
@@ -308,11 +321,9 @@ install_laptop_mode() {
 install_pacman_gui() {
 	sudo pacman -S gnome-packagekit
 
-	#%wheel ALL = NOPASSWD: /usr/bin/pacman -Sy
-	#pacaur -S pacman-notifier
-	#pacman-notifier &
-	#pacman -S pacupdate
-	#pacupdate &
+	pacaur -S kalu
+	sudo usermod -a -G kalu `whoami`
+	echo -e "[Desktop Entry]\nType=Application\nExec=kalu\nX-MATE-Autostart-enabled=true" | tee ~/.config/autostart/kalu.desktop
 }
 
 install_gaming_tweaks() {
