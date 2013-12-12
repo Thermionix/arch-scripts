@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 check_notroot() {
 	if [ $(id -u) = 0 ]; then
 		echo "Don't run as root!"
@@ -12,44 +14,33 @@ check_whiptail() {
 }
 
 enable_ssh(){
-	sudo pacman -S openssh
+	sudo pacman -S --needed openssh
 	sudo systemctl enable sshd.service
 	sudo systemctl start sshd.service
 }
 
 install_aur_helper() {
-	echo "## Installing AUR Helper"
+	if ! command -v whiptail ; then
+		echo "## Installing AUR Helper"
 
-	sudo pacman -S --needed wget base-devel
+		sudo pacman -S --noconfirm --needed wget base-devel
 
-	if ! grep -q "EDITOR" ~/.bashrc ; then 
-		echo "export EDITOR=\"nano\"" >> ~/.bashrc
+		if ! grep -q "EDITOR" ~/.bashrc ; then 
+			echo "export EDITOR=\"nano\"" >> ~/.bashrc
+		fi
+
+		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
+		pushd cower
+		makepkg -s PKGBUILD --install --asroot
+		popd
+		rm -rf cower
+
+		curl https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz | tar -zx
+		pushd pacaur
+		makepkg -s PKGBUILD --install --asroot
+		popd
+		rm -rf pacaur
 	fi
-
-	# whiptail choose pacaur pacaur yaourt?
-	# define in variable?
-
-	mkdir -p cowerbuild
-	pushd cowerbuild
-	 
-	wget https://aur.archlinux.org/packages/co/cower/cower.tar.gz
-	wget https://aur.archlinux.org/packages/co/cower/PKGBUILD
-	 
-	makepkg -s PKGBUILD --install
-	 
-	popd
-	rm -rf cowerbuild
-	 
-	mkdir -p pacaurbuild
-	pushd pacaurbuild
-	 
-	wget https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz
-	wget https://aur.archlinux.org/packages/pa/pacaur/PKGBUILD
-	 
-	makepkg -s PKGBUILD --install
-	 
-	popd
-	rm -rf pacaurbuild
 }
 
 install_multilib_repo() {
@@ -60,8 +51,8 @@ install_multilib_repo() {
 		else
 			sudo sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
 		fi
+		sudo pacman -Syy
 	fi
-	sudo pacman -Syy
 }
 
 install_xorg() {
@@ -160,18 +151,19 @@ install_video_drivers() {
 install_fonts() {
 	echo "## Installing Fonts"
 	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
-	sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/
-	whiptail --yesno "Install ttf-ms-fonts?" 8 40 && { pacaur -S ttf-ms-fonts ; }
+	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
+
+	if whiptail --yesno "Install ttf-ms-fonts?" 8 40 ; then pacaur -S --asroot ttf-ms-fonts ; fi
 }
 
 improve_readability() {
-	pacaur -S cope-git
+	pacaur -S --asroot cope-git
 }
 
 install_grub_holdshift() {
 	echo "## Installing grub-holdshift"
 
-	pacaur -S grub-holdshift
+	pacaur -S --asroot grub-holdshift
 	 
 	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
 		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
@@ -194,7 +186,7 @@ disable_root_login() {
 }
 
 install_enhanceio() {
-	pacaur -S enhanceio-dkms-git
+	pacaur -S --asroot enhanceio-dkms-git
 
 }
 
@@ -319,11 +311,13 @@ install_laptop_mode() {
 }
 
 install_pacman_gui() {
-	sudo pacman -S gnome-packagekit
+	#sudo pacman -S gnome-packagekit
 
 	pacaur -S kalu
 	sudo usermod -a -G kalu `whoami`
 	echo -e "[Desktop Entry]\nType=Application\nExec=kalu\nX-MATE-Autostart-enabled=true" | tee ~/.config/autostart/kalu.desktop
+
+	# echo -e '[options]\nCmdLineAur = mate-terminal -e "pacaur -Su"' | tee ~/.config/kalu/kalu.conf
 }
 
 install_gaming_tweaks() {
