@@ -1,0 +1,14 @@
+[Unit]
+Description=standalone instance of steam bigpicture using xinit
+After=network.target
+
+[Service]
+User=steam
+Group=steam
+Type=simple
+PIDFile=%h/.steam/steam.pid
+ExecStart=/usr/bin/startx
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

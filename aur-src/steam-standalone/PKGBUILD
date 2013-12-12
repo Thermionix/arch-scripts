@@ -1,0 +1,25 @@
+# Maintainer: Thermionix <thermionix@gmail.com>
+pkgname='steam-standalone'
+pkgver=20131212
+pkgrel=2
+pkgdesc='Launch steam bigpicture with systemd.'
+url="http://store.steampowered.com/"
+arch=('any')
+license=('MIT')
+depends=('steam' 'xfwm4')
+install="${pkgname}.install"
+source=('steam-standalone.install'
+		'steam-standalone.service'
+		'steam-standalone.xinitrc'
+		'steam-standalone.dbus-1')
+sha256sums=('1d11ca017afd5df5695ff5058cef6ddaf90e103c6d2bb7fcc6d5e8da30bd2084'
+			'dfb2fb764173ea4ca8a3853e06cba95eb8e5c1c03f75137b6f61a87565903632'
+			'404910c5c679c738ad83b9ebb00c171f393e22c819226713f00e27ba26526b13'
+			'a0f023dfb03c9ab0c2dd137bddc64f6ff7bf33bdcd222aed658718bb276b0e45')
+
+package() {
+  	install -Dm644 steam-standalone.service ${pkgdir}/usr/lib/systemd/system/steam-standalone.service
+	install -Dm644 steam-standalone.xinitrc ${pkgdir}/var/lib/steam/.xinitrc
+	install -Dm644 steam-standalone.dbus-1 ${pkgdir}/etc/dbus-1/system.d/steam-standalone.conf
+}
+
