@@ -99,17 +99,17 @@ fi
 #	disable_root_login
 #fi
 
-#if whiptail --yesno "add xboxdrv (for xbox gamepads)?" 8 40 ; then
-#	install_xboxdrv
-#fi
-
 #pacaur -S --asroot retroarch-phoenix-git
 #pacaur -S --asroot xorg-launch-helper
 
 
 # todo:
-# reboot/shutdown permissions for steam?
 # keyboard ? xf86-input-evdev ?
+
+# reboot/shutdown permissions for steam?
+# dbus-send --system --print-reply --dest=org.freedesktop.ConsoleKit /org/freedesktop/ConsoleKit/Manager org.freedesktop.ConsoleKit.Manager.Stop
+# dbus-send --system --print-reply --dest=org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager.Reboot boolean:true
+# dbus-send --system --print-reply --dest=org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager.PowerOff boolean:true
 
 #PulseAudio connect failed (used only for Mic Volume Control) with error: Access denied
 
