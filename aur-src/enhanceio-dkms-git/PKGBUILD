@@ -30,6 +30,7 @@ prepare() {
 build() {
 	sed -i -e '\|^#!/usr/bin/python$|s|python|python2|' "${srcdir}/${pkgname}/CLI/eio_cli"
 	cd "${srcdir}/${pkgname}/Driver/enhanceio"
+	warning "Please make sure the current kernel version matches the available linux-headers version"
 	make
 }
 
