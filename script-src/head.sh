@@ -10,7 +10,10 @@ check_notroot() {
 }
 
 check_whiptail() {
-	`command -v whiptail >/dev/null 2>&1 || { echo "whiptail (pkg libnewt) required for this script" >&2 ; sudo pacman -Sy libnewt ; }`
+	if ! command -v whiptail ; then
+		echo "whiptail (pkg libnewt) required for this script"
+		sudo pacman -Sy libnewt
+	fi
 }
 
 enable_ssh(){
@@ -20,8 +23,8 @@ enable_ssh(){
 }
 
 install_aur_helper() {
-	if ! command -v whiptail ; then
-		echo "## Installing AUR Helper"
+	if ! command -v pacaur ; then
+		echo "## Installing pacaur AUR Helper"
 
 		sudo pacman -S --noconfirm --needed wget base-devel
 
@@ -31,13 +34,13 @@ install_aur_helper() {
 
 		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
 		pushd cower
-		makepkg -s PKGBUILD --install --asroot
+		makepkg -s PKGBUILD --install
 		popd
 		rm -rf cower
 
 		curl https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz | tar -zx
 		pushd pacaur
-		makepkg -s PKGBUILD --install --asroot
+		makepkg -s PKGBUILD --install
 		popd
 		rm -rf pacaur
 	fi

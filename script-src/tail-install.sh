@@ -125,7 +125,7 @@ install_pacman_gui() {
 	pacaur -S kalu
 	sudo usermod -a -G kalu `whoami`
 	mkdir -p ~/.config/autostart
-	echo -e "[Desktop Entry]\nType=Application\nExec=kalu\nX-MATE-Autostart-enabled=true" | tee ~/.config/autostart/kalu.desktop
+	echo -e "[Desktop Entry]\nType=Application\nExec=kalu\nHidden=false\nX-MATE-Autostart-enabled=true\nName=kalu" | tee ~/.config/autostart/kalu.desktop
 	chmod +x ~/.config/autostart/kalu.desktop
 
 	# echo -e '[options]\nCmdLineAur = mate-terminal -e "pacaur -Su"' | tee ~/.config/kalu/kalu.conf

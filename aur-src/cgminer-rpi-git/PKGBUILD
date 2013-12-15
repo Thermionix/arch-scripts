@@ -31,6 +31,7 @@ source=("$pkgname"::'git+https://github.com/ckolivas/cgminer.git'
 sha512sums=('SKIP'
             '3317b60c6b1f14c47d8ee636113ef40a4023ab14054129de80a37947b381fd2b647a7053f4e1bb639efa225a514e862fa531908714c34040dda2d6221dde7f5f')
 _basename=cgminer
+backup=("etc/${_basename}.conf")
 
 pkgver() {
   cd "${srcdir}/${pkgname}"
