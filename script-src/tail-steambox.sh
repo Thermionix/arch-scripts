@@ -46,7 +46,8 @@ fix_audio() {
 	# sudo pacman -S alsa-utils
 	#aplay -l | whiptail
 	# echo "load-module module-alsa-sink device=hw:0,7" | sudo tee --apend /etc/pulse/default.pa
-	echo -e "defaults.pcm.!card 1\ndefaults.pcm.!device 7" | sudo tee /var/lib/steam/.asoundrc
+	echo -e 'defaults.pcm.!card 0\ndefaults.pcm.!device 7' | sudo tee /var/lib/steam/.asoundrc
+	sudo chown steam:steam /var/lib/steam/.asoundrc
 }
 
 fix_joystick_perms() {

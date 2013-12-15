@@ -185,10 +185,11 @@ install_pulse_audio() {
 }
 
 disable_root_login() {
-	passwd -l root
+	sudo passwd -l root
 }
 
 install_enhanceio() {
+	sudo pacman -S --needed dkms
+	sudo systemctl enable dkms.service
 	pacaur -S --asroot enhanceio-dkms-git
-
 }
