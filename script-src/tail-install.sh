@@ -88,7 +88,7 @@ install_desktop_applications() {
 
 	pacaur -S gvfs-mtp # android-udev
 
-	# samba openssh tmux banshee quodlibet brasero pavucontrol docker meld
+	# samba openssh tmux noise quodlibet brasero pavucontrol docker meld
 	#sudo pacaur -S btsync
 	#sudo pacaur -S btsyncindicator
 	#sudo pacman -S libreoffice
