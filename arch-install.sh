@@ -198,7 +198,13 @@ install_bootloader()
 {
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub
-	arch_chroot "grub-install --recheck ${DSK}"
+
+	if whiptail --yesno "install grub on UEFI system?" 8 40 ; then
+		pacstrap $mountpoint dosfstools efibootmgr
+		arch_chroot "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=grub --recheck --debug"
+	else
+		arch_chroot "grub-install --recheck ${DSK}"
+	fi
 
 	if $enable_luks ; then
 		cryptdevice="cryptdevice=$partroot:$maproot"
