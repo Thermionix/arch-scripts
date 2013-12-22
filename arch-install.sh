@@ -313,7 +313,7 @@ enable_ntpd() {
 		fi
 
 		arch_chroot "ntpd -q"
-		arch_chroot "hwclock -w"
+		#arch_chroot "hwclock -w"
 		arch_chroot "systemctl enable ntpd.service"
 	fi
 }

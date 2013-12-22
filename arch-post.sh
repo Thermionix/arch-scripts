@@ -96,18 +96,18 @@ install_video_drivers() {
 		4)
 			echo "## installing AMD proprietary (catalyst)"
 
+			echo -e 'Server = http://catalyst.wirephire.com/repo/catalyst/$arch\nServer = http://70.239.162.206/catalyst-mirror/repo/catalyst/$arch\nServer = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/$arch' | sudo tee /etc/pacman.d/catalyst
+
+			sudo pacman-key --keyserver pgp.mit.edu --recv-keys 0xabed422d653c3094
+			sudo pacman-key --lsign-key 0xabed422d653c3094
+
 			if ! grep -q "\[catalyst\]" /etc/pacman.conf ; then
 				echo -e "\n[catalyst]\nInclude = /etc/pacman.d/catalyst" | sudo tee --append /etc/pacman.conf
 			fi
 			 
-			`echo -e "Server = http://catalyst.wirephire.com/repo/catalyst/\$arch\nServer = http://70.239.162.206/catalyst-mirror/repo/catalyst/\$arch\nServer = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/\$arch" | sudo tee /etc/pacman.d/catalyst`
-			 
-			sudo pacman-key --keyserver pgp.mit.edu --recv-keys 0xabed422d653c3094
-			sudo pacman-key --lsign-key 0xabed422d653c3094
-			 
 			sudo pacman -Syy
-			 
-			sudo pacman -S --needed base-devel linux-headers mesa-demos qt4
+
+			sudo pacman -S --needed base-devel linux-headers mesa-demos qt4 acpid
 			 
 			sudo pacman -S catalyst-hook catalyst-utils
 
@@ -121,14 +121,15 @@ install_video_drivers() {
 			echo -e "blacklist snd_hda_intel\nblacklist snd_hda_codec_hdmi" | sudo tee /etc/modprobe.d/blacklist-hdmi.conf
 
 			sudo grub-mkconfig -o /boot/grub/grub.cfg
-			 
+
+			sudo systemctl enable atieventsd
+			sudo systemctl start atieventsd
+
+			sudo systemctl enable temp-links-catalyst
+			sudo systemctl start temp-links-catalyst
+			
 			sudo systemctl enable catalyst-hook
 			sudo systemctl start catalyst-hook
-			 
-			# sudo reboot
-			# sudo aticonfig --initial
-			# sudo aticonfig --initial=dual-head --screen-layout=right
-			# sudo aticonfig --tls=off
 		;;
 	    	5)
 			echo "## installing AMD open-source"
@@ -244,7 +245,7 @@ install_desktop_environment() {
 				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/\$arch" | sudo tee --append /etc/pacman.conf
 				sudo pacman -Syy
 			fi
-			sudo pacman -S mate mate-extras
+			sudo pacman -S mate mate-extra
 			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
 			sudo pacman -S netork-manager-applet

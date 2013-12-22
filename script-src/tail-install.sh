@@ -49,7 +49,7 @@ install_desktop_environment() {
 				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/\$arch" | sudo tee --append /etc/pacman.conf
 				sudo pacman -Syy
 			fi
-			sudo pacman -S mate mate-extras
+			sudo pacman -S mate mate-extra
 			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
 			sudo pacman -S netork-manager-applet
