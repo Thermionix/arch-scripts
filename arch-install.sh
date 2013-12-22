@@ -318,6 +318,13 @@ enable_ntpd() {
 	fi
 }
 
+enable_sshd() {
+	if whiptail --yesno "enable ssh daemon?" 8 40 ; then
+		pacstrap $mountpoint openssh
+		arch_chroot "systemctl enable sshd.service"
+	fi
+}
+
 finish_setup() {
 	# offer to umount | reboot | poweroff | do nothing
 	if whiptail --yesno "Reboot now?" 8 40 ; then
@@ -349,4 +356,5 @@ install_bootloader
 create_user
 install_network_daemon
 enable_ntpd
+enable_sshd
 finish_setup
