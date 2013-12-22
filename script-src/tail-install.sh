@@ -131,7 +131,7 @@ install_pacman_gui() {
 }
 
 install_gaming_tweaks() {
-	sudo pacman -S steam
+	sudo pacman -S steam lib32-flashplugin
 	pacaur -S sdl-nokeyboardgrab
 	echo "options usbhid mousepoll=2" | sudo tee /etc/modprobe.d/mousepolling.conf
 }
