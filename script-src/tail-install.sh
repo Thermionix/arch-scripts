@@ -1,4 +1,3 @@
-
 enable_autologin() {
 	username=`whoami`
 	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
@@ -52,7 +51,7 @@ install_desktop_environment() {
 			sudo pacman -S mate mate-extra
 			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
-			sudo pacman -S netork-manager-applet
+			sudo pacman -S network-manager-applet
 		;;
 	esac
 }
