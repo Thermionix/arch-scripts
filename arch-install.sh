@@ -104,6 +104,10 @@ partition_disk() {
 }
 
 format_disk() {
+	if $enable_uefi ; then
+		mkfs.vfat -F 32 $partesp
+	fi
+
 	echo "## mkfs $partboot"
 	mkfs.ext4 $partboot
 
