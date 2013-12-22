@@ -84,11 +84,12 @@ install_desktop_applications() {
 	 
 	sudo pacman -S mumble gimp minitube midori bleachbit youtube-dl python-pip
 
-	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git
+	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git dosfstools
 
 	pacaur -S gvfs-mtp # android-udev
 
-	# samba openssh tmux noise quodlibet brasero pavucontrol docker meld
+	# samba openssh tmux noise quodlibet pavucontrol docker meld
+	# brasero gst-plugins-ugly
 	#sudo pacaur -S btsync
 	#sudo pacaur -S btsyncindicator
 	#sudo pacman -S libreoffice
