@@ -29,6 +29,11 @@ set_variables() {
 
 	new_uuid=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 6 | head -n 1)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
+
+	enable_uefi=false
+	if whiptail --defaultno --yesno "install for UEFI system?" 8 40 ; then
+		enable_uefi=true
+	fi
 }
 
 update_locale() {
@@ -58,19 +63,39 @@ partition_disk() {
 
 	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
 	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
-	boot_end=$(( 2 + 500 ))
+
+	if $enable_uefi ; then
+		esp_end=501
+		labelesp="arch-esp"
+		partesp="/dev/disk/by-partlabel/$labelesp"
+	else
+		esp_end=2
+	fi
+
+	boot_end=$(( ${esp_end} + 500 ))
 	swap_end=$(( $boot_end + ${swap_size} ))
 
 	echo "## creating partition bios_grub"
 	parted -s ${DSK} mklabel gpt
-	parted -s ${DSK} -a optimal unit MB mkpart primary 1 2
-	parted -s ${DSK} set 1 bios_grub on
+
+	if $enable_uefi ; then
+		parted -s ${DSK} -a optimal unit MB mkpart ESI 1 ${esp_end}
+		parted -s ${DSK} set 1 boot on
+		parted -s ${DSK} mkfs 1 fat32
+		parted -s ${DSK} name 1 $labelesp
+	else
+		parted -s ${DSK} -a optimal unit MB mkpart primary 1 ${esp_end}
+		parted -s ${DSK} set 1 bios_grub on
+	fi
+
 	echo "## creating partition $labelboot"
-	parted -s ${DSK} -a optimal unit MB mkpart primary 2 $boot_end
+	parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
 	parted -s ${DSK} name 2 $labelboot
+
 	echo "## creating partition $labelswap"
 	parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
 	parted -s ${DSK} name 3 $labelswap
+
 	echo "## creating partition $labelroot"
 	parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
 	parted -s ${DSK} name 4 $labelroot
@@ -79,6 +104,10 @@ partition_disk() {
 }
 
 format_disk() {
+	if $enable_uefi ; then
+		mkfs.vfat -F 32 $partesp
+	fi
+
 	echo "## mkfs $partboot"
 	mkfs.ext4 $partboot
 
@@ -107,8 +136,13 @@ format_disk() {
 		swapon $partswap
 	fi
 
-	mkdir $mountpoint/boot
+	mkdir -p $mountpoint/boot
 	mount $partboot $mountpoint/boot
+
+	if $enable_uefi ; then
+		mkdir -p $mountpoint/boot/efi
+		mount $partesp $mountpoint/boot/efi
+	fi
 }
 
 update_mirrorlist() {
@@ -198,7 +232,13 @@ install_bootloader()
 {
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub
-	arch_chroot "grub-install --recheck ${DSK}"
+
+	if $enable_uefi ; then
+		pacstrap $mountpoint dosfstools efibootmgr
+		arch_chroot "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=grub --recheck ${DSK}"
+	else
+		arch_chroot "grub-install --recheck ${DSK}"
+	fi
 
 	if $enable_luks ; then
 		cryptdevice="cryptdevice=$partroot:$maproot"
@@ -273,8 +313,15 @@ enable_ntpd() {
 		fi
 
 		arch_chroot "ntpd -q"
-		arch_chroot "hwclock -w"
+		#arch_chroot "hwclock -w"
 		arch_chroot "systemctl enable ntpd.service"
+	fi
+}
+
+enable_sshd() {
+	if whiptail --yesno "enable ssh daemon?" 8 40 ; then
+		pacstrap $mountpoint openssh
+		arch_chroot "systemctl enable sshd.service"
 	fi
 }
 
@@ -283,6 +330,9 @@ finish_setup() {
 	if whiptail --yesno "Reboot now?" 8 40 ; then
 		echo "## unmounting and rebooting"
 
+		if $enable_uefi ; then
+			umount -l $mountpoint/boot/efi
+		fi
 		umount -l $mountpoint/boot
 		umount -l $mountpoint
 
@@ -306,4 +356,5 @@ install_bootloader
 create_user
 install_network_daemon
 enable_ntpd
+enable_sshd
 finish_setup

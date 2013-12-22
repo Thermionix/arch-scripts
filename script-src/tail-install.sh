@@ -1,4 +1,3 @@
-
 enable_autologin() {
 	username=`whoami`
 	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
@@ -49,10 +48,10 @@ install_desktop_environment() {
 				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/\$arch" | sudo tee --append /etc/pacman.conf
 				sudo pacman -Syy
 			fi
-			sudo pacman -S mate mate-extras
+			sudo pacman -S mate mate-extra
 			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
-			sudo pacman -S netork-manager-applet
+			sudo pacman -S network-manager-applet
 		;;
 	esac
 }
@@ -133,7 +132,7 @@ install_pacman_gui() {
 }
 
 install_gaming_tweaks() {
-	sudo pacman -S steam
+	sudo pacman -S steam lib32-flashplugin
 	pacaur -S sdl-nokeyboardgrab
 	echo "options usbhid mousepoll=2" | sudo tee /etc/modprobe.d/mousepolling.conf
 }
