@@ -130,6 +130,8 @@ install_video_drivers() {
 			
 			sudo systemctl enable catalyst-hook
 			sudo systemctl start catalyst-hook
+
+			sudo aticonfig --initial
 		;;
 	    	5)
 			echo "## installing AMD open-source"

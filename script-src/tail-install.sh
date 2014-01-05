@@ -128,7 +128,7 @@ install_pacman_gui() {
 	echo -e "[Desktop Entry]\nType=Application\nExec=kalu\nHidden=false\nX-MATE-Autostart-enabled=true\nName=kalu" | tee ~/.config/autostart/kalu.desktop
 	chmod +x ~/.config/autostart/kalu.desktop
 
-	# echo -e '[options]\nCmdLineAur = mate-terminal -e "pacaur -Su"' | tee ~/.config/kalu/kalu.conf
+	# echo -e '[options]\nCmdLineAur = mate-terminal -e "pacaur -Sau"' | tee ~/.config/kalu/kalu.conf
 }
 
 install_gaming_tweaks() {
