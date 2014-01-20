@@ -86,7 +86,7 @@ install_desktop_applications() {
 	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git dosfstools
 
 	pacaur -S gvfs-mtp # android-udev
-
+	pacaur -S i-nex
 	# samba openssh tmux noise quodlibet pavucontrol docker meld
 	# brasero gst-plugins-ugly
 	#sudo pacaur -S btsync
@@ -141,7 +141,7 @@ install_wine() {
 	echo "## Installing Wine"
 
 	sudo pacman -S wine winetricks wine-mono wine_gecko
-	sudo pacman -S alsa-lib alsa-plugins lib32-alsa-lib lib32-alsa-plugins lib32-mpg123 libpulse mpg123 lib32-libpulse lib32-openal
+	sudo pacman -S alsa-lib alsa-plugins lib32-alsa-lib lib32-alsa-plugins lib32-mpg123 libpulse mpg123 lib32-libpulse lib32-openal lib32-ncurses
 	 
 	WINEARCH=win32 winecfg
 
