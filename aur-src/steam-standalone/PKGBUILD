@@ -6,7 +6,7 @@ pkgdesc='Launch steam bigpicture with systemd.'
 url="http://store.steampowered.com/"
 arch=('any')
 license=('MIT')
-depends=('steam' 'xfwm4')
+depends=('steam' 'xfwm4' 'xorg-xinit')
 install="${pkgname}.install"
 source=('steam-standalone.install'
 		'steam-standalone.service'

@@ -92,6 +92,8 @@ else
 	sudo systemctl enable steam-standalone.service
 fi
 
+sudo systemctl enable NetworkManager-wait-online.service
+
 sudo pacman -S flashplugin
 if [[ `uname -m` == x86_64 ]]; then
 	sudo pacman -S lib32-flashplugin
