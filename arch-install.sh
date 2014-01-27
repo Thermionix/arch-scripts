@@ -30,6 +30,7 @@ set_variables() {
 	new_uuid=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 6 | head -n 1)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
 
+	# [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
 	enable_uefi=false
 	if whiptail --defaultno --yesno "install for UEFI system?" 8 40 ; then
 		enable_uefi=true

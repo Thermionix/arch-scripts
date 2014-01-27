@@ -34,13 +34,13 @@ install_aur_helper() {
 
 		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
 		pushd cower
-		makepkg -s PKGBUILD --install
+		makepkg -s PKGBUILD --install `if [ $(id -u) = 0 ]; then echo "--asroot" ; fi`
 		popd
 		rm -rf cower
 
 		curl https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz | tar -zx
 		pushd pacaur
-		makepkg -s PKGBUILD --install
+		makepkg -s PKGBUILD --install `if [ $(id -u) = 0 ]; then echo "--asroot" ; fi`
 		popd
 		rm -rf pacaur
 	fi
@@ -130,6 +130,8 @@ install_video_drivers() {
 			
 			sudo systemctl enable catalyst-hook
 			sudo systemctl start catalyst-hook
+
+			sudo aticonfig --initial
 		;;
 	    	5)
 			echo "## installing AMD open-source"
