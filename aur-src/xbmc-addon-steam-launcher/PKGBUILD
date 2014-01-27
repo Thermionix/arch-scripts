@@ -1,6 +1,6 @@
 # Maintainer: Thermionix <thermionix@gmail>
 pkgname='xbmc-addon-steam-launcher'
-pkgver=20131212
+pkgver=20140127
 pkgrel=4
 pkgdesc='XBMC addon to launch Steam from within XBMC.'
 arch=('any')

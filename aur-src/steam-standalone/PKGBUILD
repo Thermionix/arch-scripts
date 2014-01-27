@@ -1,6 +1,6 @@
 # Maintainer: Thermionix <thermionix@gmail.com>
 pkgname='steam-standalone'
-pkgver=20140120
+pkgver=20140127
 pkgrel=1
 pkgdesc='Launch steam bigpicture with systemd.'
 url="http://store.steampowered.com/"
