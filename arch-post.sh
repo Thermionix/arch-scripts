@@ -274,6 +274,8 @@ install_desktop_applications() {
 		echo "alias yolo='pacaur -Syu'" >> ~/.bash_aliases
 	fi
 
+	sudo pacman -S archlinux-wallpaper #archlinux-artwork
+
 	# whiptail checklist following	
 	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
 
