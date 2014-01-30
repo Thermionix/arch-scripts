@@ -76,7 +76,8 @@ install_desktop_applications() {
 		echo "alias yolo='pacaur -Syu'" >> ~/.bash_aliases
 	fi
 
-	sudo pacman -S archlinux-wallpaper #archlinux-artwork
+	sudo pacman -S archlinux-wallpaper
+	pacaur -Sa archlinux-artwork
 
 	# whiptail checklist following	
 	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
@@ -88,8 +89,10 @@ install_desktop_applications() {
 	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git dosfstools
 
 	pacaur -S gvfs-mtp # android-udev
-	pacaur -S i-nex
-	# samba openssh tmux noise quodlibet pavucontrol docker meld
+	pacaur -S i-nex hardinfo
+
+	# noise quodlibet pavucontrol xnoise
+	# samba openssh tmux docker meld
 	# brasero gst-plugins-ugly
 	#sudo pacaur -S btsync
 	#sudo pacaur -S btsyncindicator
@@ -196,6 +199,9 @@ install_gsettings() {
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name \"terminal\"
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command \"gnome-terminal\"
 	#gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding \"\<Ctrl\>\<Alt\>t\"
+
+	#gsettings set org.mate.panel.object:/org/mate/panel/objects/menu-bar/ use-custom-icon 'true'
+	#gsettings set org.mate.panel.object:/org/mate/panel/objects/menu-bar/ custom-icon '/usr/share/archlinux/icons/archlinux-icon-crystal-32.svg'
 }
 
 blacklist_mei_me() {
