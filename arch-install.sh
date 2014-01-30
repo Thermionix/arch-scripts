@@ -121,12 +121,10 @@ format_disk() {
 		maproot="croot"
 		mapswap="cswap"
 
-		lukspass=$(whiptail --nocancel --passwordbox "please specify encryption pass:" 10 40 3>&1 1>&2 2>&3)
-
 		echo "## encrypting $partroot"
-		echo $lukspass > cryptsetup --batch-mode --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $partroot
+		cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $partroot
 		echo "## opening $partroot"
-		echo $lukspass > cryptsetup luksOpen $partroot $maproot
+		cryptsetup luksOpen $partroot $maproot
 		echo "## mkfs /dev/mapper/$maproot"
 		mkfs.ext4 /dev/mapper/$maproot
 		mount /dev/mapper/$maproot $mountpoint
