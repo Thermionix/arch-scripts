@@ -49,6 +49,10 @@ partition_disk() {
 	disks=`parted --list | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
 	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
+	echo "## WILL COMPLETELY WIPE ${DSK}"
+	read -p "Press [Enter] key to continue"
+	sgdisk --zap-all ${DSK}
+
 	enable_trim=false
 	if [ -n "$(hdparm -I ${DSK} 2>&1 | grep 'TRIM supported')" ]; then
 		echo "## detected TRIM support"
@@ -236,7 +240,7 @@ install_bootloader()
 
 	if $enable_uefi ; then
 		pacstrap $mountpoint dosfstools efibootmgr
-		arch_chroot "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=grub --recheck ${DSK}"
+		arch_chroot "grub-install --root-directory=/boot --boot-directory=/boot/efi --target=x86_64-efi --bootloader-id=boot --recheck ${DSK}"
 	else
 		arch_chroot "grub-install --recheck ${DSK}"
 	fi
