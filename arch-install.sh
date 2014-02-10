@@ -173,7 +173,7 @@ update_mirrorlist() {
 
 install_base(){
 	echo "## installing base system"
-	pacstrap $mountpoint base base-devel
+	pacstrap $mountpoint base base-devel dialog
 }
 
 configure_fstab(){

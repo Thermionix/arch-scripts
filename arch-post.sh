@@ -257,6 +257,13 @@ install_desktop_environment() {
 install_scanning() {
 	sudo pacman -S sane xsane
 	sudo usermod -a -G scanner `whoami`
+	sudo usermod -a -G lp `whoami`
+	#/etc/udev/rules.d/53-sane.rules 
+	#SUBSYSTEM=="usb", ATTRS{product}=="CanoScan", GROUP="scanner", MODE="0660", ENV{libsane_matched}="yes"
+
+	sudo mkdir -p /var/lock/sane
+	sudo chmod 660 /var/lock/sane
+	sudo chown root:scanner /var/lock/sane
 }
 
 install_desktop_applications() {
@@ -348,10 +355,59 @@ install_wine() {
 	 
 	WINEARCH=win32 winecfg
 
-	#winetricks videomemorysize=2048 3072?
 	`echo "export WINEDLLOVERRIDES='winemenubuilder.exe=d'" >> ~/.bashrc`
 	sed -i -e "/^text/d" -e "/^image/d" ~/.local/share/applications/mimeinfo.cache
 	rm ~/.local/share/applications/wine-extension*
+
+	#wine reg add 'HKCU\Software\Wine\Direct3D'
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v DirectDrawRenderer /d opengl
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v UseGLSL /d enabled
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v StrictDrawOrdering /d enabled
+
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v Multisampling /d disabled
+
+	wine reg add 'HKCU\Software\Wine\Direct3D' /v VideoMemorySize /d 3072
+
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v OffscreenRenderingMode /d fbo
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v PixelShaderMode /d enabled
+	#wine reg add 'HKCU\Software\Wine\DirectSound'
+	#wine reg add 'HKCU\Software\Wine\DirectSound' /v MaxShadowSize /d 0
+
+	#wine reg add 'HKCU\Software\Wine\Drivers' /v Audio /d alsa
+
+	## fix steam text rendering
+	wine reg add 'HKCU\Software\Valve\Steam' /v DWriteEnable /t REG_DWORD /d 00000000
+
+	## Source games rely on a paged pool memory size specification for audio, and WINE by default does not have this set.
+	# wine reg add 'HKLM\System\CurrentControlSet\Control\Session Manager\Memory Management\' /v PagedPoolSize /t REG_DWORD /d 402653184 /f
+
+	## trick steam to think amd card is nvidia
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v VideoPciDeviceID /t REG_DWORD /d 0x10de
+	#wine reg add 'HKCU\Software\Wine\Direct3D' /v VideoPciVendorID /t REG_DWORD /d 0x0402
+	#wine reg delete 'HKCU\Software\Wine\Direct3D' /v VideoPciDeviceID
+	#wine reg delete 'HKCU\Software\Wine\Direct3D' /v VideoPciVendorID
+
+	pacaur -Sa tf-microsoft-tahoma ttf-ms-fonts
+	find ~/.wine/drive_c/windows/Fonts/ -iname "arial*" ! -iname "arial.ttf" -type f -delete
+
+	## make fonts look better in Steam and in all other applications
+	wine reg add 'HKCU\Control Panel\Desktop' /v FontSmoothing /d 2
+	wine reg add 'HKCU\Control Panel\Desktop' /v FontSmoothingType /t REG_DWORD /d 00000002
+	wine reg add 'HKCU\Control Panel\Desktop' /v FontSmoothingGamma /t REG_DWORD /d 00000578
+	wine reg add 'HKCU\Control Panel\Desktop' /v FontSmoothingOrientation /t REG_DWORD /d 00000001
+
+cat <<-'EOF' | sed "s/whoami/`whoami`/" | tee ~/.local/share/applications/steam-wine.desktop
+[Desktop Entry]
+Encoding=UTF-8
+Value=1.0
+Type=Application
+Name=steam-wine
+Terminal=false
+Comment=Access Steam via Wine
+Icon=/home/whoami/.wine/drive_c/Program Files/Steam/Public/steam_updating_posix.tga
+Exec=env WINEDEBUG=-all /usr/bin/wine /home/whoami/.wine/drive_c/Program\ Files/Steam/Steam.exe
+Categories=Game
+EOF
 }
 
 install_printing() {
