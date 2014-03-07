@@ -136,6 +136,7 @@ install_video_drivers() {
 	    	5)
 			echo "## installing AMD open-source"
 			sudo pacman -S xf86-video-ati
+			# radeon.dpm=1 radeon.audio=1
 		;;
 		6)
 			echo "## installing NVIDIA open-source (nouveau)"
@@ -159,17 +160,17 @@ install_fonts() {
 	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
 
-	if whiptail --yesno "Install ttf-ms-fonts?" 8 40 ; then pacaur -S --asroot ttf-ms-fonts ; fi
+	if whiptail --yesno "Install ttf-ms-fonts?" 8 40 ; then pacaur -S ttf-ms-fonts ; fi
 }
 
 improve_readability() {
-	pacaur -S --asroot cope-git
+	pacaur -S cope-git
 }
 
 install_grub_holdshift() {
 	echo "## Installing grub-holdshift"
 
-	pacaur -S --asroot grub-holdshift
+	pacaur -S grub-holdshift
 	 
 	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
 		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
@@ -194,14 +195,15 @@ disable_root_login() {
 install_enhanceio() {
 	sudo pacman -S --needed dkms
 	sudo systemctl enable dkms.service
-	pacaur -S --asroot enhanceio-dkms-git
+	pacaur -S enhanceio-dkms-git
 }
 enable_autologin() {
 	username=`whoami`
 	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
 		echo "## enabling autologin for user: $username"
 		sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" | sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
+		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" \
+			| sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
 	fi
 }
 
@@ -242,10 +244,6 @@ install_desktop_environment() {
 			echo "exec cinnamon-session" > ~/.xinitrc
 		;;
 		4)
-			if ! grep -q "\[mate\]" /etc/pacman.conf ; then
-				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/\$arch" | sudo tee --append /etc/pacman.conf
-				sudo pacman -Syy
-			fi
 			sudo pacman -S mate mate-extra
 			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
@@ -285,7 +283,7 @@ install_desktop_applications() {
 	pacaur -Sa archlinux-artwork
 
 	# whiptail checklist following	
-	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
+	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin thunderbird openssh
 
 	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted minicom
 	 
@@ -294,7 +292,7 @@ install_desktop_applications() {
 	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git dosfstools
 
 	pacaur -S gvfs-mtp # android-udev
-	pacaur -S i-nex hardinfo
+	pacaur -S hardinfo
 
 	# noise quodlibet pavucontrol xnoise
 	# samba openssh tmux docker meld
@@ -327,6 +325,11 @@ install_laptop_mode() {
 #    ethtool: ethernet support
 #    wireless_tools: WiFi support
 #    xorg-xset: DPMS standby support
+}
+
+guitar_tools() {
+	sudo pacman -S ardour tuxguitar audacity jre7-openjdk
+	# jack?
 }
 
 install_pacman_gui() {

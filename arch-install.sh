@@ -238,6 +238,10 @@ install_bootloader()
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub
 
+	#/etc/machine-id 
+	#uname -r
+	#/etc/os-release
+
 	if $enable_uefi ; then
 		pacstrap $mountpoint dosfstools efibootmgr
 		arch_chroot "grub-install --root-directory=/boot --boot-directory=/boot/efi --target=x86_64-efi --bootloader-id=boot --recheck ${DSK}"

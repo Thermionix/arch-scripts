@@ -136,6 +136,7 @@ install_video_drivers() {
 	    	5)
 			echo "## installing AMD open-source"
 			sudo pacman -S xf86-video-ati
+			# radeon.dpm=1 radeon.audio=1
 		;;
 		6)
 			echo "## installing NVIDIA open-source (nouveau)"
@@ -159,17 +160,17 @@ install_fonts() {
 	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
 
-	if whiptail --yesno "Install ttf-ms-fonts?" 8 40 ; then pacaur -S --asroot ttf-ms-fonts ; fi
+	if whiptail --yesno "Install ttf-ms-fonts?" 8 40 ; then pacaur -S ttf-ms-fonts ; fi
 }
 
 improve_readability() {
-	pacaur -S --asroot cope-git
+	pacaur -S cope-git
 }
 
 install_grub_holdshift() {
 	echo "## Installing grub-holdshift"
 
-	pacaur -S --asroot grub-holdshift
+	pacaur -S grub-holdshift
 	 
 	if ! grep -q "GRUB_FORCE_HIDDEN_MENU" /etc/default/grub ; then
 		echo -e "\nGRUB_FORCE_HIDDEN_MENU=\"true\"" | sudo tee --append /etc/default/grub
@@ -194,7 +195,7 @@ disable_root_login() {
 install_enhanceio() {
 	sudo pacman -S --needed dkms
 	sudo systemctl enable dkms.service
-	pacaur -S --asroot enhanceio-dkms-git
+	pacaur -S enhanceio-dkms-git
 }
 
 install_steam() {

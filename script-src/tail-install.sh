@@ -3,7 +3,8 @@ enable_autologin() {
 	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
 		echo "## enabling autologin for user: $username"
 		sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" | sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
+		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" \
+			| sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
 	fi
 }
 
@@ -44,10 +45,6 @@ install_desktop_environment() {
 			echo "exec cinnamon-session" > ~/.xinitrc
 		;;
 		4)
-			if ! grep -q "\[mate\]" /etc/pacman.conf ; then
-				echo -e "\n[mate]\nSigLevel = Optional TrustAll\nServer = http://repo.mate-desktop.org/archlinux/\$arch" | sudo tee --append /etc/pacman.conf
-				sudo pacman -Syy
-			fi
 			sudo pacman -S mate mate-extra
 			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
 			echo "exec mate-session" > ~/.xinitrc
@@ -87,7 +84,7 @@ install_desktop_applications() {
 	pacaur -Sa archlinux-artwork
 
 	# whiptail checklist following	
-	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin
+	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin thunderbird openssh
 
 	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted minicom
 	 
@@ -96,7 +93,7 @@ install_desktop_applications() {
 	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git dosfstools
 
 	pacaur -S gvfs-mtp # android-udev
-	pacaur -S i-nex hardinfo
+	pacaur -S hardinfo
 
 	# noise quodlibet pavucontrol xnoise
 	# samba openssh tmux docker meld
@@ -129,6 +126,11 @@ install_laptop_mode() {
 #    ethtool: ethernet support
 #    wireless_tools: WiFi support
 #    xorg-xset: DPMS standby support
+}
+
+guitar_tools() {
+	sudo pacman -S ardour tuxguitar audacity jre7-openjdk
+	# jack?
 }
 
 install_pacman_gui() {
