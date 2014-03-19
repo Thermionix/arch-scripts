@@ -1,0 +1,41 @@
+# Maintainer: Thermionix <thermionix@gmail.com>
+pkgname='steam-ice'
+pkgver=20140319
+pkgrel=1
+pkgdesc='automatically add Emulator ROMs into Steam'
+url="http://scottrice.github.io/Ice/"
+arch=('any')
+license=('MIT')
+depends=('steam'
+		 'python'
+		 'dolphin-emu'
+		 'mednafen'
+		 'mupen64plus'
+		 'pcsx2')
+install="${pkgname}.install"
+source=('https://github.com/scottrice/Ice/archive/master.zip'
+		'consoles.txt'
+		'emulators.txt'
+		'steam-ice.install')
+md5sums=('SKIP'
+		 'aafb0e2befae55cbd88af947fb447f4f'
+         '03c64b985c259d8dab5b2ae5f80d085e'
+         'dc70d7c55f080f26bccd5b23016916ef')
+
+package() {
+    install -d "${pkgdir}/opt/steam-ice"
+
+	cp "${srcdir}/consoles.txt" "${pkgdir}/opt/steam-ice/"
+	cp "${srcdir}/emulators.txt" "${pkgdir}/opt/steam-ice/"
+	cp "${srcdir}/Ice-master/config.txt" "${pkgdir}/opt/steam-ice/"
+
+	cp "${srcdir}/Ice-master/ice.py" "${pkgdir}/opt/steam-ice/"
+	cp "${srcdir}/Ice-master/README.md" "${pkgdir}/opt/steam-ice/"
+	cp "${srcdir}/Ice-master/LICENSE" "${pkgdir}/opt/steam-ice/"
+
+	cp -R "${srcdir}/Ice-master/ice" "${pkgdir}/opt/steam-ice/ice"
+
+	install -d "${pkgdir}/usr/bin"
+	ln -s "${pkgdir}/opt/steam-ice/ice.py" "${pkgdir}/usr/bin/steam-ice"
+}
+

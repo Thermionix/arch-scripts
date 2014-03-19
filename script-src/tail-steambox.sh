@@ -67,6 +67,15 @@ polkit.addRule(function(action, subject) {
 EOF
 }
 
+setup_ice() {
+# pacaur -Sa steam-ice
+# sudo -u steam steam-ice
+}
+
+share_dirs() {
+# smb.conf to world write /var/lib/steam as user:steam & /var/lib/xbmc as user:xbmc
+}
+
 check_whiptail
 
 enable_ssh
