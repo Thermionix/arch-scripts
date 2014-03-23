@@ -1,5 +1,6 @@
 post_install() {
 	echo "close steam"
+	echo "you may need to set your steam userdata path in /opt/steam-ice/config.txt"
 	echo "run the command *steam-ice* as your steam user (this will create directory structure)"
 	echo "add some rom files into your steam user's ~/ROMS/ dir"
 	echo "run the command *steam-ice* as your steam user"

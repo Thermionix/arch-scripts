@@ -70,6 +70,7 @@ EOF
 setup_ice() {
 # pacaur -Sa steam-ice
 # sudo -u steam steam-ice
+# pacman -S libstdc++5 lib32-libstdc++5
 }
 
 share_dirs() {
