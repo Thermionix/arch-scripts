@@ -137,6 +137,10 @@ install_video_drivers() {
 			echo "## installing AMD open-source"
 			sudo pacman -S xf86-video-ati
 			# radeon.dpm=1 radeon.audio=1
+
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S lib32-ati-dri
+			fi
 		;;
 		6)
 			echo "## installing NVIDIA open-source (nouveau)"
@@ -264,6 +268,16 @@ polkit.addRule(function(action, subject) {
   }
 });
 EOF
+}
+
+setup_ice() {
+# pacaur -Sa steam-ice
+# sudo -u steam steam-ice
+# pacman -S libstdc++5 lib32-libstdc++5
+}
+
+share_dirs() {
+# smb.conf to world write /var/lib/steam as user:steam & /var/lib/xbmc as user:xbmc
 }
 
 check_whiptail

@@ -137,6 +137,10 @@ install_video_drivers() {
 			echo "## installing AMD open-source"
 			sudo pacman -S xf86-video-ati
 			# radeon.dpm=1 radeon.audio=1
+
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S lib32-ati-dri
+			fi
 		;;
 		6)
 			echo "## installing NVIDIA open-source (nouveau)"
