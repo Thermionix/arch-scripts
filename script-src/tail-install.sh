@@ -95,6 +95,8 @@ install_desktop_applications() {
 	pacaur -S gvfs-mtp # android-udev
 	pacaur -S hardinfo
 
+	sudo pacman -S pkgbuild-introspection
+
 	# noise quodlibet pavucontrol xnoise
 	# samba openssh tmux docker meld
 	# brasero gst-plugins-ugly
@@ -102,6 +104,18 @@ install_desktop_applications() {
 	#sudo pacaur -S btsyncindicator
 	#sudo pacman -S libreoffice
 	#sudo pacman -S synergy
+}
+
+install_vbox() {
+#sudo pacman -S virtualbox virtualbox-guest-iso net-tools
+#gpasswd -a $USER vboxusers
+#sudo modprobe vboxdrv
+#/etc/modules-load.d/virtualbox.conf
+#vboxdrv
+#vboxnetadp
+#vboxnetflt
+#vboxpci
+
 }
 
 install_laptop_mode() {
