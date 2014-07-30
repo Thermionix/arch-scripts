@@ -97,7 +97,7 @@ install_desktop_applications() {
 
 	sudo pacman -S pkgbuild-introspection
 
-	# noise quodlibet pavucontrol xnoise
+	# noise quodlibet pavucontrol xnoise pitivi
 	# samba openssh tmux docker meld
 	# brasero gst-plugins-ugly
 	#sudo pacaur -S btsync
