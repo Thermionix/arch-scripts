@@ -84,9 +84,9 @@ install_desktop_applications() {
 	pacaur -Sa archlinux-artwork
 
 	# whiptail checklist following	
-	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin thunderbird openssh
+	sudo pacman -S firefox vlc gstreamer0.10-plugins flashplugin openssh
 
-	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted minicom
+	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted putty
 	 
 	sudo pacman -S mumble gimp minitube midori bleachbit youtube-dl python-pip
 

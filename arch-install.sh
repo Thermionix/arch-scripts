@@ -80,6 +80,8 @@ partition_disk() {
 	boot_end=$(( ${esp_end} + 500 ))
 	swap_end=$(( $boot_end + ${swap_size} ))
 
+	# TODO : allow mbr/gpt choice
+
 	echo "## creating partition bios_grub"
 	parted -s ${DSK} mklabel gpt
 
