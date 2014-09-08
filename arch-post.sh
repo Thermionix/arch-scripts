@@ -249,8 +249,11 @@ install_desktop_environment() {
 		;;
 		4)
 			sudo pacman -S mate mate-extra
-			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme
+			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme ambiance-radiance-cinnamon-mate
 			echo "exec mate-session" > ~/.xinitrc
+			# pacman -S archlinux-artwork
+			# mkdir -p ~/.icons/gnome/24x24/places
+			# wget -O ~/.icons/gnome/24x24/places/start-here.png http://i.imgur.com/vBpJDs7.png
 			sudo pacman -S network-manager-applet
 		;;
 	esac
@@ -296,9 +299,11 @@ install_desktop_applications() {
 	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git dosfstools
 
 	pacaur -S gvfs-mtp # android-udev
-	pacaur -S hardinfo
+	pacaur -S hardinfo putty-freedesktop
 
 	sudo pacman -S pkgbuild-introspection
+
+	# pacaur -S radare2 binwalk bokken-hg
 
 	# noise quodlibet pavucontrol xnoise pitivi
 	# samba openssh tmux docker meld
@@ -350,6 +355,42 @@ guitar_tools() {
 	# jack?
 }
 
+install_xboxdrv() {
+	pacaur -S --asroot xboxdrv
+	echo "blacklist xpad" | sudo tee /etc/modprobe.d/xpad_blacklist.conf
+	sudo rmmod xpad
+	sudo sed -i -e '/ExecStart/s/$/ --daemon/' /usr/lib/systemd/system/xboxdrv.service
+	echo -e "\nnext-controller = true\nnext-controller = true\nnext-controller = true" | sudo tee --append /etc/conf.d/xboxdrv
+	#  [xboxdrv-daemon]\ndbus = disabled
+	sudo systemctl enable xboxdrv.service
+}
+
+fix_joystick_perms() {
+	#sudo pacman -S xf86-input-joystick joyutils
+	#pacman -S lib32-sdl sdl2
+	#find /dev/input/by-path/ -name '*event-joystick' | xargs sudo chmod +r
+	echo 'KERNEL=="event*", ENV{ID_INPUT_JOYSTICK}=="1", MODE:="0644"' | sudo tee /etc/udev/rules.d/joystick-perm.rules
+}
+
+fix_networkmanager_perms() {
+	cat <<-'EOF' | sudo tee /etc/polkit-1/rules.d/50-org.freedesktop.NetworkManager.rules
+polkit.addRule(function(action, subject) {
+  if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 && subject.isInGroup("network")) {
+    return polkit.Result.YES;
+  }
+});
+EOF
+
+}
+
+setup_ice() {
+# pacaur -Sa steam-ice
+# sudo -u steam steam-ice
+# pacman -S libstdc++5 lib32-libstdc++5
+}
+
+#sudo systemctl enable NetworkManager-wait-online.service
+
 install_pacman_gui() {
 	#sudo pacman -S gnome-packagekit
 
@@ -358,6 +399,7 @@ install_pacman_gui() {
 	mkdir -p ~/.config/autostart
 	echo -e "[Desktop Entry]\nType=Application\nExec=kalu\nHidden=false\nX-MATE-Autostart-enabled=true\nName=kalu" | tee ~/.config/autostart/kalu.desktop
 	chmod +x ~/.config/autostart/kalu.desktop
+	# AutoNotifs = 0
 
 	# echo -e '[options]\nCmdLineAur = mate-terminal -e "pacaur -Sau"' | tee ~/.config/kalu/kalu.conf
 }
