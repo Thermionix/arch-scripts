@@ -300,7 +300,6 @@ install_desktop_applications() {
 
 	sudo pacman -S gvfs-smb exfat-utils fuse-exfat git dosfstools
 
-	pacaur -S gvfs-mtp # android-udev
 	pacaur -S hardinfo putty-freedesktop
 
 	sudo pacman -S pkgbuild-introspection
@@ -314,6 +313,11 @@ install_desktop_applications() {
 	#sudo pacaur -S btsyncindicator
 	#sudo pacman -S libreoffice
 	#sudo pacman -S synergy
+}
+
+install_android() {
+	sudo pacman -S gvfs-mtp libmtp android-tools android-udev
+	sudo gpasswd -a `whoami` uucp
 }
 
 install_vbox() {
