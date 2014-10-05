@@ -9,6 +9,8 @@ check_notroot() {
 	fi
 }
 
+# echo "kernel.sysrq = 1" | sudo tee /etc/sysctl.d/sysrq.conf
+
 check_whiptail() {
 	if ! command -v whiptail ; then
 		echo "whiptail (pkg libnewt) required for this script"

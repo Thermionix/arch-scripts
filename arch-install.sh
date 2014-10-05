@@ -59,6 +59,11 @@ partition_disk() {
 		enable_trim=true
 	fi
 
+	enable_gpt=false
+	if whiptail --defaultno --yesno "use GPT partitioning?" 8 40 ; then
+		enable_gpt=true
+	fi
+
 	labelroot="arch-root"
 	labelswap="arch-swap"
 	labelboot="arch-boot"
@@ -69,43 +74,60 @@ partition_disk() {
 	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
 	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
 
-	if $enable_uefi ; then
-		esp_end=501
-		labelesp="arch-esp"
-		partesp="/dev/disk/by-partlabel/$labelesp"
+	if $enable_gpt ; then
+		if $enable_uefi ; then
+			esp_end=501
+			labelesp="arch-esp"
+			partesp="/dev/disk/by-partlabel/$labelesp"
+		else
+			esp_end=2
+		fi
 	else
-		esp_end=2
+		esp_end=0
 	fi
 
 	boot_end=$(( ${esp_end} + 500 ))
 	swap_end=$(( $boot_end + ${swap_size} ))
 
+
 	# TODO : allow mbr/gpt choice
+	if $enable_gpt ; then
+		parted -s ${DSK} mklabel gpt
 
-	echo "## creating partition bios_grub"
-	parted -s ${DSK} mklabel gpt
+		echo "## creating partition bios_grub"
+		if $enable_uefi ; then
+			parted -s ${DSK} -a optimal unit MB mkpart ESI 1 ${esp_end}
+			parted -s ${DSK} set 1 boot on
+			parted -s ${DSK} mkfs 1 fat32
+			parted -s ${DSK} name 1 $labelesp
+		else
+			parted -s ${DSK} -a optimal unit MB mkpart primary 1 ${esp_end}
+			parted -s ${DSK} set 1 bios_grub on
+		fi
 
-	if $enable_uefi ; then
-		parted -s ${DSK} -a optimal unit MB mkpart ESI 1 ${esp_end}
-		parted -s ${DSK} set 1 boot on
-		parted -s ${DSK} mkfs 1 fat32
-		parted -s ${DSK} name 1 $labelesp
+		echo "## creating partition $labelboot"
+		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
+		parted -s ${DSK} name 2 $labelboot
+
+		echo "## creating partition $labelswap"
+		parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
+		parted -s ${DSK} name 3 $labelswap
+
+		echo "## creating partition $labelroot"
+		parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
+		parted -s ${DSK} name 4 $labelroot
 	else
-		parted -s ${DSK} -a optimal unit MB mkpart primary 1 ${esp_end}
-		parted -s ${DSK} set 1 bios_grub on
+		parted -s ${DSK} mklabel mbr
+
+		echo "## creating partition $labelboot"
+		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
+
+		echo "## creating partition $labelswap"
+		parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
+
+		echo "## creating partition $labelroot"
+		parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
 	fi
-
-	echo "## creating partition $labelboot"
-	parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
-	parted -s ${DSK} name 2 $labelboot
-
-	echo "## creating partition $labelswap"
-	parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
-	parted -s ${DSK} name 3 $labelswap
-
-	echo "## creating partition $labelroot"
-	parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
-	parted -s ${DSK} name 4 $labelroot
 
 	whiptail --title "generated partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
 }
@@ -123,7 +145,26 @@ format_disk() {
 	enable_luks=false
 	if whiptail --defaultno --yesno "encrypt root and swap partitions?" 8 40 ; then
 		enable_luks=true
+	fi
 
+	enable_bcache=false
+	if whiptail --defaultno --yesno "setup bcache?" 8 40 ; then
+		enable_bcache=true
+	fi
+
+	if $enable_bcache ; then
+		pacman -S --noconfirm --needed base-devel
+		export EDITOR=nano
+		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx
+		pushd bcache-tools
+		makepkg -s PKGBUILD --install --asroot
+		popd
+		rm -rf bcache-tools
+		modprobe bcache
+		make-bcache -B /dev/sd? /dev/sd? -C /dev/sd?
+	fi
+
+	if $enable_luks ; then
 		maproot="croot"
 		mapswap="cswap"
 
