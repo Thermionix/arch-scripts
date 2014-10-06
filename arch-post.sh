@@ -322,7 +322,7 @@ install_android() {
 	sudo gpasswd -a `whoami` uucp
 }
 
-install_vbox() {
+#install_vbox() {
 #sudo pacman -S virtualbox virtualbox-guest-iso net-tools
 #gpasswd -a $USER vboxusers
 #sudo modprobe vboxdrv
@@ -331,8 +331,7 @@ install_vbox() {
 #vboxnetadp
 #vboxnetflt
 #vboxpci
-
-}
+#}
 
 install_laptop_mode() {
 	# tpfanco
@@ -391,11 +390,11 @@ EOF
 
 }
 
-setup_ice() {
+#setup_ice() {
 # pacaur -Sa steam-ice
 # sudo -u steam steam-ice
 # pacman -S libstdc++5 lib32-libstdc++5
-}
+#}
 
 #sudo systemctl enable NetworkManager-wait-online.service
 

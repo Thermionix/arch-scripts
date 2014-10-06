@@ -83,7 +83,7 @@ partition_disk() {
 			esp_end=2
 		fi
 	else
-		esp_end=0
+		esp_end=1
 	fi
 
 	boot_end=$(( ${esp_end} + 500 ))
@@ -161,7 +161,8 @@ format_disk() {
 		popd
 		rm -rf bcache-tools
 		modprobe bcache
-		make-bcache -B /dev/sd? /dev/sd? -C /dev/sd?
+		# TODO : choise cache disk
+		#make-bcache -B ${DSK} -C ${CACHE}
 	fi
 
 	if $enable_luks ; then
