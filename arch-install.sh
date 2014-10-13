@@ -59,17 +59,18 @@ partition_disk() {
 		enable_trim=true
 	fi
 
-	enable_gpt=false
-	if whiptail --defaultno --yesno "use GPT partitioning?" 8 40 ; then
-		enable_gpt=true
+	enable_gpt=true
+	if ! $enable_uefi ; then
+		if ! whiptail --defaultno --yesno "use GPT partitioning?" 8 40 ; then
+			enable_gpt=false
+		fi
 	fi
+
+	# TODO : ask to enable_swap ?
 
 	labelroot="arch-root"
 	labelswap="arch-swap"
 	labelboot="arch-boot"
-	partroot="/dev/disk/by-partlabel/$labelroot"
-	partswap="/dev/disk/by-partlabel/$labelswap"
-	partboot="/dev/disk/by-partlabel/$labelboot"
 
 	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
 	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
@@ -89,9 +90,11 @@ partition_disk() {
 	boot_end=$(( ${esp_end} + 500 ))
 	swap_end=$(( $boot_end + ${swap_size} ))
 
-
-	# TODO : allow mbr/gpt choice
 	if $enable_gpt ; then
+		partroot="/dev/disk/by-partlabel/$labelroot"
+		partswap="/dev/disk/by-partlabel/$labelswap"
+		partboot="/dev/disk/by-partlabel/$labelboot"
+
 		parted -s ${DSK} mklabel gpt
 
 		echo "## creating partition bios_grub"
@@ -117,16 +120,19 @@ partition_disk() {
 		parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
 		parted -s ${DSK} name 4 $labelroot
 	else
-		parted -s ${DSK} mklabel mbr
+		parted -s ${DSK} mklabel msdos
 
 		echo "## creating partition $labelboot"
 		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
+		partboot="${DSK}1"
 
 		echo "## creating partition $labelswap"
 		parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
+		partswap="${DSK}2"
 
 		echo "## creating partition $labelroot"
 		parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
+		partroot="${DSK}3"
 	fi
 
 	whiptail --title "generated partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
@@ -138,7 +144,7 @@ format_disk() {
 	fi
 
 	echo "## mkfs $partboot"
-	mkfs.ext4 $partboot
+	mkfs.ext4 -q $partboot
 
 	mountpoint="/mnt"
 
@@ -148,21 +154,26 @@ format_disk() {
 	fi
 
 	enable_bcache=false
-	if whiptail --defaultno --yesno "setup bcache?" 8 40 ; then
-		enable_bcache=true
+	if ! $enable_luks ; then
+		if whiptail --defaultno --yesno "setup bcache?" 8 40 ; then
+			enable_bcache=true
+		fi
 	fi
 
 	if $enable_bcache ; then
-		pacman -S --noconfirm --needed base-devel
+		pacman -Sy --noconfirm base-devel libunistring git
 		export EDITOR=nano
 		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx
 		pushd bcache-tools
 		makepkg -s PKGBUILD --install --asroot
 		popd
-		rm -rf bcache-tools
 		modprobe bcache
-		# TODO : choise cache disk
-		#make-bcache -B ${DSK} -C ${CACHE}
+		CACHEDSK=$(whiptail --nocancel --menu "Select the Disk to use as cache" 18 45 10 $disks 3>&1 1>&2 2>&3)
+		sgdisk --zap-all ${CACHEDSK}
+		wipefs -a ${CACHEDSK}
+		make-bcache --wipe-bcache -B ${partroot} -C ${CACHEDSK}
+		sleep 4
+		partroot="/dev/bcache0"
 	fi
 
 	if $enable_luks ; then
@@ -181,6 +192,7 @@ format_disk() {
 		mkfs.ext4 $partroot
 		mount $partroot $mountpoint
 
+		pacman -Sy --noconfirm libutil-linux
 		mkswap $partswap
 		swapon $partswap
 	fi
@@ -265,6 +277,15 @@ configure_system(){
 		arch_chroot "mkinitcpio -p linux"
 	fi
 
+	if $enable_bcache ; then
+		cp bcache-tools/*.pkg.tar.xz $mountpoint/var/cache/pacman/pkg/
+		arch_chroot "pacman -U /var/cache/pacman/pkg/bcache-tools*"
+		echo "## adding bcache hook"
+		sed -i -e "/^HOOKS/s/filesystems/bcache filesystems/" $mountpoint/etc/mkinitcpio.conf
+		sed -i -e '/^MODULES/s/""/"bcache"/' $mountpoint/etc/mkinitcpio.conf
+		arch_chroot "mkinitcpio -p linux"
+	fi
+
 	echo "## writing vconsole.conf"
 	echo "KEYMAP=$keyboard" > $mountpoint/etc/vconsole.conf
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
@@ -339,7 +360,7 @@ install_network_daemon() {
 		1)
 			echo "## installing networkmanager"
 			pacstrap $mountpoint networkmanager
-			arch_chroot "systemctl enable NetworkManager && systemctl enable NetworkManager-dispatcher.service && systemctl enable ModemManager.service"
+			arch_chroot "systemctl enable NetworkManager && systemctl enable NetworkManager-dispatcher.service"
 			enable_networkmanager=true
 		;;
     	2)
@@ -399,9 +420,9 @@ finish_setup() {
 
 set_variables
 update_locale
+update_mirrorlist
 partition_disk
 format_disk
-update_mirrorlist
 install_base
 configure_fstab
 configure_system
