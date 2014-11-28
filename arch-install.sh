@@ -284,7 +284,7 @@ configure_system(){
 
 	if $enable_bcache ; then
 		cp bcache-tools/*.pkg.tar.xz $mountpoint/var/cache/pacman/pkg/
-		arch_chroot "pacman -U /var/cache/pacman/pkg/bcache-tools*"
+		arch_chroot "pacman -U /var/cache/pacman/pkg/bcache-tools* --noconfirm"
 		echo "## adding bcache hook"
 		sed -i -e "/^HOOKS/s/filesystems/bcache filesystems/" $mountpoint/etc/mkinitcpio.conf
 		sed -i -e '/^MODULES/s/""/"bcache"/' $mountpoint/etc/mkinitcpio.conf
