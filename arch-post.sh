@@ -34,13 +34,13 @@ install_aur_helper() {
 
 		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
 		pushd cower
-		makepkg -s PKGBUILD --install
+		makepkg -s PKGBUILD --install --noconfirm
 		popd
 		rm -rf cower
 
 		curl https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz | tar -zx
 		pushd pacaur
-		makepkg -s PKGBUILD --install
+		makepkg -s PKGBUILD --install --noconfirm
 		popd
 		rm -rf pacaur
 	fi

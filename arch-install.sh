@@ -167,7 +167,7 @@ format_disk() {
 		export EDITOR=nano
 		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx
 		pushd bcache-tools
-		makepkg -s PKGBUILD --install --asroot
+		makepkg -s PKGBUILD --install --noconfirm --asroot
 		popd
 		CACHEDSK=$(whiptail --nocancel --menu "Select the Disk to use as cache" 18 45 10 $disks 3>&1 1>&2 2>&3)
 		sgdisk --zap-all ${CACHEDSK}
