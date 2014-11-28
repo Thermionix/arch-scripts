@@ -162,7 +162,8 @@ format_disk() {
 	fi
 
 	if $enable_bcache ; then
-		pacman -Sy --noconfirm base-devel git
+		pacman -Sy --noconfirm git
+		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -S --noconfirm
 		export EDITOR=nano
 		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx
 		pushd bcache-tools
@@ -170,7 +171,6 @@ format_disk() {
 		popd
 		CACHEDSK=$(whiptail --nocancel --menu "Select the Disk to use as cache" 18 45 10 $disks 3>&1 1>&2 2>&3)
 		sgdisk --zap-all ${CACHEDSK}
-		wipefs -a ${CACHEDSK}
 		make-bcache --wipe-bcache -B ${partroot} -C ${CACHEDSK}
 		sleep 4
 		partroot="/dev/bcache0"
