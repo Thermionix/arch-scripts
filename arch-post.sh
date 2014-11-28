@@ -12,12 +12,12 @@ check_notroot() {
 check_whiptail() {
 	if ! command -v whiptail ; then
 		echo "whiptail (pkg libnewt) required for this script"
-		sudo pacman -Sy libnewt
+		sudo pacman -Sy --noconfirm libnewt
 	fi
 }
 
 enable_ssh(){
-	sudo pacman -S --needed openssh
+	sudo pacman -Sy --noconfirm --needed openssh
 	sudo systemctl enable sshd.service
 	sudo systemctl start sshd.service
 }
@@ -26,7 +26,7 @@ install_aur_helper() {
 	if ! command -v pacaur ; then
 		echo "## Installing pacaur AUR Helper"
 
-		sudo pacman -S --noconfirm --needed wget base-devel
+		sudo pacman -Sy --noconfirm --needed wget base-devel
 
 		if ! grep -q "EDITOR" ~/.bashrc ; then 
 			echo "export EDITOR=\"nano\"" >> ~/.bashrc
@@ -34,13 +34,13 @@ install_aur_helper() {
 
 		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
 		pushd cower
-		makepkg -s PKGBUILD --install `if [ $(id -u) = 0 ]; then echo "--asroot" ; fi`
+		makepkg -s PKGBUILD --install
 		popd
 		rm -rf cower
 
 		curl https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz | tar -zx
 		pushd pacaur
-		makepkg -s PKGBUILD --install `if [ $(id -u) = 0 ]; then echo "--asroot" ; fi`
+		makepkg -s PKGBUILD --install
 		popd
 		rm -rf pacaur
 	fi
@@ -60,10 +60,9 @@ install_multilib_repo() {
 
 install_xorg() {
 	echo "## Installing Xorg"
-	sudo pacman -S xorg-server xorg-server-utils xorg-xinit mesa
-	sudo pacman -S libtxc_dxtn
+	sudo pacman -Sy --noconfirm xorg-server xorg-server-utils xorg-xinit mesa libtxc_dxtn
 	if [[ `uname -m` == x86_64 ]]; then
-		sudo pacman -S lib32-libtxc_dxtn
+		sudo pacman -S --noconfirm lib32-libtxc_dxtn
 	fi
 }
 
@@ -79,18 +78,18 @@ install_video_drivers() {
 	3>&1 1>&2 2>&3) in
 		1)
 			echo "## installing vesa"
-			sudo pacman -S xf86-video-vesa
+			sudo pacman -S --noconfirm xf86-video-vesa
 		;;
 		2)
 			echo "## installing virtualbox"
-			sudo pacman -S virtualbox-guest-utils
+			sudo pacman -S --noconfirm virtualbox-guest-utils
 		;;
 		3)
 			echo "## installing intel"
-			sudo pacman -S xf86-video-intel
+			sudo pacman -S --noconfirm xf86-video-intel
 
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S lib32-intel-dri
+				sudo pacman -S --noconfirm lib32-intel-dri
 			fi
 		;;
 		4)
@@ -107,12 +106,12 @@ install_video_drivers() {
 			 
 			sudo pacman -Syy
 
-			sudo pacman -S --needed base-devel linux-headers mesa-demos qt4 acpid
+			sudo pacman -S --noconfirm --needed base-devel linux-headers mesa-demos qt4 acpid
 			 
-			sudo pacman -S catalyst-hook catalyst-utils
+			sudo pacman -S --noconfirm catalyst-hook catalyst-utils
 
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S lib32-catalyst-utils
+				sudo pacman -S --noconfirm lib32-catalyst-utils
 			fi
 			 
 			sudo sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$# nomodeset\"#" /etc/default/grub
@@ -135,25 +134,25 @@ install_video_drivers() {
 		;;
 	    	5)
 			echo "## installing AMD open-source"
-			sudo pacman -S xf86-video-ati
+			sudo pacman -S --noconfirm xf86-video-ati
 			# radeon.dpm=1 radeon.audio=1
 
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S lib32-ati-dri
+				sudo pacman -S --noconfirm lib32-ati-dri
 			fi
 		;;
 		6)
 			echo "## installing NVIDIA open-source (nouveau)"
-			sudo pacman -S xf86-video-nouveau
+			sudo pacman -S --noconfirm xf86-video-nouveau
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S lib32-nouveau-dri
+				sudo pacman -S --noconfirm lib32-nouveau-dri
 			fi
 		;;
 		7)
 			echo "## installing NVIDIA proprietary"
-			sudo pacman -S nvidia
+			sudo pacman -S --noconfirm nvidia
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S lib32-nvidia-libgl
+				sudo pacman -S --noconfirm lib32-nvidia-libgl
 			fi
 		;;
 	esac
@@ -161,7 +160,7 @@ install_video_drivers() {
 
 install_fonts() {
 	echo "## Installing Fonts"
-	sudo pacman -S ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
+	sudo pacman -S --noconfirm ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
 }
 
@@ -211,10 +210,10 @@ install_desktop_environment() {
 			echo "exec cinnamon-session" > ~/.xinitrc
 		;;
 		4)
-			sudo pacman -S mate mate-extra
-			pacaur -S adwaita-x-dark-and-light-theme gnome-icon-theme ambiance-radiance-cinnamon-mate
+			sudo pacman -S --noconfirm mate mate-extra
+			pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme gnome-icon-theme ambiance-radiance-cinnamon-mate
 			echo "exec mate-session" > ~/.xinitrc
-			sudo pacman -S network-manager-applet
+			sudo pacman -S --noconfirm network-manager-applet
 
 			# pacman -S archlinux-artwork
 			echo "fixing mate-menu icon for gnome icon theme"

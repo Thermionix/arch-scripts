@@ -10,10 +10,10 @@ cehck_net_connectivity() {
 }
 
 enable_ssh() {
-	systemctl start sshd 
-	echo "## set passwd for login with ssh root@<ip>"
+	systemctl start sshd
+	ipaddr=`ip addr | grep inet | grep -e enp -e wlan | awk '{print $2}' | cut -d "/" -f1`
+	echo "## set passwd for login with ssh root@$ipaddr"
 	passwd
-	ip addr | grep "inet"
 }
 
 set_variables() {
@@ -161,13 +161,12 @@ format_disk() {
 	fi
 
 	if $enable_bcache ; then
-		pacman -Sy --noconfirm base-devel libunistring git
+		pacman -Sy --noconfirm base-devel git
 		export EDITOR=nano
-		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx
-		pushd bcache-tools
+		curl https://aur.archlinux.org/packages/bc/bcache-tools-git/bcache-tools-git.tar.gz | tar -zx
+		pushd bcache-tools-git
 		makepkg -s PKGBUILD --install --asroot
 		popd
-		modprobe bcache
 		CACHEDSK=$(whiptail --nocancel --menu "Select the Disk to use as cache" 18 45 10 $disks 3>&1 1>&2 2>&3)
 		sgdisk --zap-all ${CACHEDSK}
 		wipefs -a ${CACHEDSK}
@@ -232,6 +231,11 @@ update_mirrorlist() {
 install_base(){
 	echo "## installing base system"
 	pacstrap $mountpoint base base-devel dialog
+
+	if `cat /proc/cpuinfo | grep vendor_id | grep -iq intel` ; then
+		echo "## installing intel ucode"
+		pacstrap $mountpoint intel-ucode
+	fi
 }
 
 configure_fstab(){
@@ -418,6 +422,9 @@ finish_setup() {
 	fi
 }
 
+if whiptail --defaultno --yesno "enable ssh?" 8 40 ; then
+	enable_ssh
+fi
 set_variables
 update_locale
 update_mirrorlist
