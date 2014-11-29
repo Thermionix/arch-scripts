@@ -145,6 +145,7 @@ format_disk() {
 	fi
 
 	echo "## mkfs $partboot"
+	# TODO : don't ask to overwrite existing filesystem
 	mkfs.ext4 -q $partboot
 
 	mountpoint="/mnt"
@@ -163,14 +164,18 @@ format_disk() {
 
 	if $enable_bcache ; then
 		pacman -Sy --noconfirm git
+		# TODO : don't fail if nothing to install
 		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -S --noconfirm
 		export EDITOR=nano
 		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx
 		pushd bcache-tools
 		makepkg -s PKGBUILD --install --noconfirm --asroot
 		popd
+		modprobe bcache
 		CACHEDSK=$(whiptail --nocancel --menu "Select the Disk to use as cache" 18 45 10 $disks 3>&1 1>&2 2>&3)
 		sgdisk --zap-all ${CACHEDSK}
+		wipefs -a ${CACHEDSK}
+		wipefs -a ${partroot}
 		make-bcache --wipe-bcache -B ${partroot} -C ${CACHEDSK}
 		sleep 4
 		partroot="/dev/bcache0"
@@ -423,9 +428,6 @@ finish_setup() {
 	fi
 }
 
-if whiptail --defaultno --yesno "enable ssh?" 8 40 ; then
-	enable_ssh
-fi
 set_variables
 update_locale
 update_mirrorlist
