@@ -73,6 +73,7 @@ partition_disk() {
 	labelswap="arch-swap"
 	labelboot="arch-boot"
 
+	# TODO : 512 unless memsize < 512
 	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
 	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
 
@@ -197,7 +198,6 @@ format_disk() {
 		mkfs.ext4 $partroot
 		mount $partroot $mountpoint
 
-		pacman -Sy --noconfirm libutil-linux
 		mkswap $partswap
 		swapon $partswap
 	fi
