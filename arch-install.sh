@@ -67,15 +67,20 @@ partition_disk() {
 		fi
 	fi
 
-	# TODO : ask to enable_swap ?
+	enable_swap=false
+	if whiptail --defaultno --yesno "create a swap partition?" 8 40 ; then
+		enable_swap=true
+	fi
 
 	labelroot="arch-root"
-	labelswap="arch-swap"
 	labelboot="arch-boot"
 
-	# TODO : 512 unless memsize < 512
-	swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
-	swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
+	if $enable_swap ; then
+		labelswap="arch-swap"
+		# TODO : 512 unless memsize < 512
+		swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
+		swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
+	fi
 
 	if $enable_gpt ; then
 		if $enable_uefi ; then
@@ -90,7 +95,10 @@ partition_disk() {
 	fi
 
 	boot_end=$(( ${esp_end} + 500 ))
-	swap_end=$(( $boot_end + ${swap_size} ))
+
+	if $enable_swap ; then
+		swap_end=$(( $boot_end + ${swap_size} ))
+	fi
 
 	if $enable_gpt ; then
 		partroot="/dev/disk/by-partlabel/$labelroot"
@@ -114,13 +122,19 @@ partition_disk() {
 		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
 		parted -s ${DSK} name 2 $labelboot
 
-		echo "## creating partition $labelswap"
-		parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
-		parted -s ${DSK} name 3 $labelswap
+		if $enable_swap ; then
+			echo "## creating partition $labelswap"
+			parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
+			parted -s ${DSK} name 3 $labelswap
 
-		echo "## creating partition $labelroot"
-		parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
-		parted -s ${DSK} name 4 $labelroot
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
+			parted -s ${DSK} name 4 $labelroot
+		else
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
+			parted -s ${DSK} name 3 $labelroot
+		fi
 	else
 		parted -s ${DSK} mklabel msdos
 
@@ -128,13 +142,19 @@ partition_disk() {
 		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
 		partboot="${DSK}1"
 
-		echo "## creating partition $labelswap"
-		parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
-		partswap="${DSK}2"
+		if $enable_swap ; then
+			echo "## creating partition $labelswap"
+			parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
+			partswap="${DSK}2"
 
-		echo "## creating partition $labelroot"
-		parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
-		partroot="${DSK}3"
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
+			partroot="${DSK}3"
+		else
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
+			partroot="${DSK}2"
+		fi
 	fi
 
 	whiptail --title "generated partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
@@ -145,8 +165,9 @@ format_disk() {
 		mkfs.vfat -F 32 $partesp
 	fi
 
+	echo "## cleaning $partboot"
+	wipefs -a $partboot
 	echo "## mkfs $partboot"
-	# TODO : don't ask to overwrite existing filesystem
 	mkfs.ext4 -q $partboot
 
 	mountpoint="/mnt"
@@ -198,8 +219,10 @@ format_disk() {
 		mkfs.ext4 $partroot
 		mount $partroot $mountpoint
 
-		mkswap $partswap
-		swapon $partswap
+		if $enable_swap ; then
+			mkswap $partswap
+			swapon $partswap
+		fi
 	fi
 
 	mkdir -p $mountpoint/boot
@@ -248,9 +271,11 @@ configure_fstab(){
 	echo "## generating fstab entries"
 	genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
 
-	if $enable_luks ; then
-		echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
-		echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
+	if $enable_swap ; then
+		if $enable_luks ; then
+			echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
+			echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
+		fi
 	fi
 
 	if $enable_trim ; then
@@ -259,7 +284,9 @@ configure_fstab(){
 
 		if $enable_luks ; then
 			sed -i -e 's/rw,/discard,rw,/' $mountpoint/etc/fstab
-			sed -i -e 's/swap,/swap,discard,/' $mountpoint/etc/crypttab
+			if $enable_swap ; then
+				sed -i -e 's/swap,/swap,discard,/' $mountpoint/etc/crypttab
+			fi
 		fi
 	fi
 
