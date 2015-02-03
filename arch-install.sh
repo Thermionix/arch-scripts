@@ -189,9 +189,11 @@ format_disk() {
 		# TODO : don't fail if nothing to install
 		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -S --noconfirm
 		export EDITOR=nano
-		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx
-		pushd bcache-tools
-		makepkg -s PKGBUILD --install --noconfirm --asroot
+		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx --directory=/tmp
+		pushd /tmp/bcache-tools
+		chown -R nobody .
+		sudo -u nobody makepkg --noconfirm
+		pacman -U bcache-tools*.pkg.tar.xz
 		popd
 		modprobe bcache
 		CACHEDSK=$(whiptail --nocancel --menu "Select the Disk to use as cache" 18 45 10 $disks 3>&1 1>&2 2>&3)
@@ -315,7 +317,7 @@ configure_system(){
 	fi
 
 	if $enable_bcache ; then
-		cp bcache-tools/*.pkg.tar.xz $mountpoint/var/cache/pacman/pkg/
+		cp /tmp/bcache-tools/*.pkg.tar.xz $mountpoint/var/cache/pacman/pkg/
 		arch_chroot "pacman -U /var/cache/pacman/pkg/bcache-tools* --noconfirm"
 		echo "## adding bcache hook"
 		sed -i -e "/^HOOKS/s/filesystems/bcache filesystems/" $mountpoint/etc/mkinitcpio.conf
