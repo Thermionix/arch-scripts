@@ -187,7 +187,8 @@ format_disk() {
 	if $enable_bcache ; then
 		pacman -Sy --noconfirm git
 		# TODO : don't fail if nothing to install
-		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -S --noconfirm
+		#fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -S --noconfirm
+		pacman -S --noconfirm base-devel
 		export EDITOR=nano
 		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx --directory=/tmp
 		pushd /tmp/bcache-tools
