@@ -32,6 +32,8 @@ install_aur_helper() {
 			echo "export EDITOR=\"nano\"" >> ~/.bashrc
 		fi
 
+		sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
+
 		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
 		pushd cower
 		makepkg -s PKGBUILD --install --noconfirm
