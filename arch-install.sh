@@ -348,7 +348,7 @@ install_bootloader()
 
 	if $enable_uefi ; then
 		pacstrap $mountpoint dosfstools efibootmgr
-		arch_chroot "grub-install --root-directory=/boot --boot-directory=/boot/efi --target=x86_64-efi --bootloader-id=boot --recheck ${DSK}"
+		arch_chroot "grub-install --efi-directory=/boot/efi --target=x86_64-efi --bootloader-id=grub_uefi --recheck"
 	else
 		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
 	fi
