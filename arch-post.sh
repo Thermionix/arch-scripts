@@ -96,7 +96,12 @@ install_video_drivers() {
 		4)
 			echo "## installing AMD proprietary (catalyst)"
 
-			echo -e 'Server = http://catalyst.wirephire.com/repo/catalyst/$arch\nServer = http://70.239.162.206/catalyst-mirror/repo/catalyst/$arch\nServer = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/$arch' | sudo tee /etc/pacman.d/catalyst
+cat <<-'EOF' | sudo tee /etc/pacman.d/catalyst
+Server = http://catalyst.wirephire.com/repo/catalyst/$arch
+Server = http://70.239.162.206/catalyst-mirror/repo/catalyst/$arch
+Server = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/$arch
+Server = http://mirror.hactar.bz/Vi0L0/catalyst/$arch
+EOF
 
 			sudo pacman-key --keyserver pgp.mit.edu --recv-keys 0xabed422d653c3094
 			sudo pacman-key --lsign-key 0xabed422d653c3094
@@ -107,20 +112,17 @@ install_video_drivers() {
 			 
 			sudo pacman -Syy
 
-			sudo pacman -S --noconfirm --needed base-devel linux-headers mesa-demos qt4 acpid
-			 
-			sudo pacman -S --noconfirm catalyst-hook catalyst-utils
+			sudo pacman -S --noconfirm catalyst-hook catalyst-utils catalyst-libgl acpid
 
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S --noconfirm lib32-catalyst-utils
+				sudo pacman -S --noconfirm lib32-catalyst-utils lib32-catalyst-libgl
 			fi
 			 
 			sudo sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$# nomodeset\"#" /etc/default/grub
+			sudo grub-mkconfig -o /boot/grub/grub.cfg
 			 
 			echo "blacklist radeon" | sudo tee /etc/modprobe.d/blacklist-radeon.conf
 			echo -e "blacklist snd_hda_intel\nblacklist snd_hda_codec_hdmi" | sudo tee /etc/modprobe.d/blacklist-hdmi.conf
-
-			sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 			sudo systemctl enable atieventsd
 			sudo systemctl start atieventsd
@@ -132,6 +134,7 @@ install_video_drivers() {
 			sudo systemctl start catalyst-hook
 
 			sudo aticonfig --initial
+			# aticonfig --initial=dual-head --screen-layout=left
 		;;
 	    	5)
 			echo "## installing AMD open-source"
