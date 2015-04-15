@@ -135,6 +135,7 @@ EOF
 
 			sudo aticonfig --initial
 			# aticonfig --initial=dual-head --screen-layout=left
+			# aticonfig --set-pcs-u32=DDX,EnableTearFreeDesktop,1
 		;;
 	    	5)
 			echo "## installing AMD open-source"
@@ -188,6 +189,35 @@ install_x_autostart() {
 		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
 		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
 	fi
+}
+
+paccache_cleanup() {
+
+cat <<-'EOF' | sudo tee /etc/systemd/system/paccache-clean.timer
+[Unit]
+Description=Clean pacman cache weekly
+
+[Timer]
+OnBootSec=10min
+OnCalendar=weekly
+Persistent=true     
+ 
+[Install]
+WantedBy=timers.target
+EOF
+
+cat <<-'EOF' | sudo tee /etc/systemd/system/paccache-clean.service
+[Unit]
+Description=Clean pacman cache
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/paccache -rk2
+ExecStart=/usr/bin/paccache -ruk0
+EOF
+
+sudo systemctl enable paccache-clean.timer
+
 }
 
 install_desktop_environment() {
