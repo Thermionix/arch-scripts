@@ -35,7 +35,7 @@ install_aur_helper() {
 		#sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
 		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
 		pushd cower
-		makepkg -s PKGBUILD --install --noconfirm  --skippgpcheck
+		makepkg -s PKGBUILD --install --noconfirm --ignorearch --skippgpcheck
 		popd
 		rm -rf cower
 
@@ -76,6 +76,7 @@ install_video_drivers() {
 	"5" "AMD open-source" \
 	"6" "NVIDIA open-source (nouveau)" \
 	"7" "NVIDIA proprietary" \
+	"8" "Raspberry Pi (fbdev)" \
 	3>&1 1>&2 2>&3) in
 		1)
 			echo "## installing vesa"
@@ -159,6 +160,10 @@ EOF
 			if [[ `uname -m` == x86_64 ]]; then
 				sudo pacman -S --noconfirm lib32-nvidia-libgl
 			fi
+		;;
+		8)
+			echo "## installing driver for Raspberry Pi (fbdev)"
+			sudo pacman -S --noconfirm xf86-video-fbdev
 		;;
 	esac
 }
