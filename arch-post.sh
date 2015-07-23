@@ -250,7 +250,7 @@ install_desktop_environment() {
 		;;
 		4)
 			sudo pacman -S --noconfirm mate mate-extra
-			pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme gnome-icon-theme ambiance-radiance-colors-suite
+			pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme gnome-icon-theme # ambiance-radiance-colors-suite
 			echo "exec mate-session" > ~/.xinitrc
 			sudo pacman -S --noconfirm network-manager-applet
 
