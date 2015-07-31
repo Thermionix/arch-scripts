@@ -250,14 +250,15 @@ install_desktop_environment() {
 		;;
 		4)
 			sudo pacman -S --noconfirm mate mate-extra
-			pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme gnome-icon-theme # ambiance-radiance-colors-suite
-			echo "exec mate-session" > ~/.xinitrc
-			sudo pacman -S --noconfirm network-manager-applet
 
-			# pacman -S archlinux-artwork
+			echo "exec mate-session" > ~/.xinitrc
+			sudo pacman -S --noconfirm network-manager-applet mate-disk-utility gnome-icon-theme
+
 			echo "fixing mate-menu icon for gnome icon theme"
 			mkdir -p ~/.icons/gnome/24x24/places
 			wget -O ~/.icons/gnome/24x24/places/start-here.png http://i.imgur.com/vBpJDs7.png
+
+			pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme
 		;;
 	esac
 }
