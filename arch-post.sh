@@ -275,7 +275,8 @@ options=(
 6 "Fonts" off
 7 "Enable X autostart" off
 8 "Enable autologin" off
-9 "reboot" off
+9 "paccache-clean (weekly service)" off
+10 "reboot" off
 )
 choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 
@@ -307,6 +308,9 @@ do
 			enable_autologin
 		;;
 		9)
+			paccache_cleanup
+		;;
+		10)
 			sudo reboot
 		;;
     esac

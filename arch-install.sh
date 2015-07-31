@@ -295,7 +295,9 @@ configure_fstab(){
 	nano $mountpoint/etc/fstab
 
 	if $enable_luks ; then
-		nano $mountpoint/etc/crypttab
+		if $enable_swap ; then
+			nano $mountpoint/etc/crypttab
+		fi
 	fi
 }
 
