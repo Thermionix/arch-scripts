@@ -225,6 +225,16 @@ sudo systemctl enable paccache-clean.timer
 
 }
 
+pacman_utils() {
+
+	# install haveged for better randomness
+	sudo pacman -S haveged
+	sudo systemctl enable haveged
+	sudo systemctl start haveged
+	# 
+
+}
+
 install_desktop_environment() {
 	case $(whiptail --menu "Choose a Desktop Environment" 20 60 12 \
 	"1" "gnome" \
@@ -249,7 +259,7 @@ install_desktop_environment() {
 			echo "exec cinnamon-session" > ~/.xinitrc
 		;;
 		4)
-			sudo pacman -S --noconfirm mate mate-extra
+			sudo pacman -S --noconfirm mate mate-extra pulseaudio
 
 			echo "exec mate-session" > ~/.xinitrc
 			sudo pacman -S --noconfirm network-manager-applet mate-disk-utility gnome-icon-theme
