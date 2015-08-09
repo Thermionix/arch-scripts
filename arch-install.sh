@@ -342,7 +342,7 @@ configure_system(){
 install_bootloader()
 {
 	echo "## installing grub to ${DSK}"
-	pacstrap $mountpoint grub
+	pacstrap $mountpoint grub memtest86+
 
 	#/etc/machine-id 
 	#uname -r

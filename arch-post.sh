@@ -45,6 +45,9 @@ install_aur_helper() {
 		popd
 		rm -rf pacaur
 	fi
+
+	echo "Defaults passwd_timeout=0" | sudo tee /etc/sudoers.d/timeout
+	echo 'Defaults editor=/usr/bin/nano, !env_editor' | sudo tee /etc/sudoers.d/nano
 }
 
 install_multilib_repo() {
@@ -226,7 +229,6 @@ sudo systemctl enable paccache-clean.timer
 }
 
 pacman_utils() {
-
 	# install haveged for better randomness
 	sudo pacman -S haveged
 	sudo systemctl enable haveged
@@ -236,41 +238,16 @@ pacman_utils() {
 }
 
 install_desktop_environment() {
-	case $(whiptail --menu "Choose a Desktop Environment" 20 60 12 \
-	"1" "gnome" \
-	"2" "xfce" \
-	"3" "cinnamon" \
-	"4" "MATE" \
-	3>&1 1>&2 2>&3) in
-		1)
-			sudo pacman -S --ignore empathy --ignore epiphany --ignore totem gnome gnome-shell-extensions
-			sudo pacman -S gedit gnome-tweak-tool file-roller dconf-editor
-			#nautilus-open-terminal
-			echo "exec gnome-session --session=gnome-classic" > ~/.xinitrc
-			pacaur -S mediterraneannight-theme
-		;;
-		2)
-			sudo pacman -S xfce4
-			pacaur -S xfce-theme-greenbird-git
-			echo "exec startxfce4" > ~/.xinitrc
-		;;
-		3)
-			sudo pacman -S cinnamon gedit gnome-terminal file-roller evince eog
-			echo "exec cinnamon-session" > ~/.xinitrc
-		;;
-		4)
-			sudo pacman -S --noconfirm mate mate-extra pulseaudio
+	sudo pacman -S --noconfirm mate mate-extra pulseaudio
 
-			echo "exec mate-session" > ~/.xinitrc
-			sudo pacman -S --noconfirm network-manager-applet mate-disk-utility gnome-icon-theme
+	echo "exec mate-session" > ~/.xinitrc
+	sudo pacman -S --noconfirm network-manager-applet mate-disk-utility gnome-icon-theme
 
-			echo "fixing mate-menu icon for gnome icon theme"
-			mkdir -p ~/.icons/gnome/24x24/places
-			wget -O ~/.icons/gnome/24x24/places/start-here.png http://i.imgur.com/vBpJDs7.png
+	echo "fixing mate-menu icon for gnome icon theme"
+	mkdir -p ~/.icons/gnome/24x24/places
+	wget -O ~/.icons/gnome/24x24/places/start-here.png http://i.imgur.com/vBpJDs7.png
 
-			pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme
-		;;
-	esac
+	pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme
 }
 
 check_notroot
@@ -281,8 +258,8 @@ options=(
 1 "AUR Helper" off
 2 "Enable multilib repository" off
 3 "Xorg" off
-4 "Video Drivers" off
-5 "Desktop Environment" off
+4 "Video Driver Selection" off
+5 "MATE Desktop Environment" off
 6 "Fonts" off
 7 "Enable X autostart" off
 8 "Enable autologin" off
