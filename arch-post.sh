@@ -33,13 +33,13 @@ install_aur_helper() {
 		fi
 
 		#sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
-		curl https://aur.archlinux.org/packages/co/cower/cower.tar.gz | tar -zx
+		curl https://aur.archlinux.org/cgit/aur.git/snapshot/cower.tar.gz | tar -zx
 		pushd cower
 		makepkg -s PKGBUILD --install --noconfirm --ignorearch --skippgpcheck
 		popd
 		rm -rf cower
 
-		curl https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz | tar -zx
+		curl https://aur.archlinux.org/cgit/aur.git/snapshot/pacaur.tar.gz | tar -zx
 		pushd pacaur
 		makepkg -s PKGBUILD --install --noconfirm
 		popd

@@ -189,7 +189,7 @@ format_disk() {
 		# TODO : don't fail if nothing to install
 		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -S --noconfirm gcc
 		export EDITOR=nano
-		curl https://aur.archlinux.org/packages/bc/bcache-tools/bcache-tools.tar.gz | tar -zx --directory=/tmp
+		curl https://aur.archlinux.org/cgit/aur.git/snapshot/bcache-tools.tar.gz | tar -zx --directory=/tmp
 		pushd /tmp/bcache-tools
 		chown -R nobody .
 		sudo -u nobody makepkg --noconfirm
