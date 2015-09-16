@@ -47,7 +47,7 @@ update_locale() {
 }
 
 partition_disk() {
-	disks=`parted --list | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
+	disks=`parted --list --script | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
 	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
 	echo "## WILL COMPLETELY WIPE ${DSK}"

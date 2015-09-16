@@ -32,10 +32,11 @@ install_aur_helper() {
 			echo "export EDITOR=\"nano\"" >> ~/.bashrc
 		fi
 
-		#sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
+		gpg --list-keys
+		sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
 		curl https://aur.archlinux.org/cgit/aur.git/snapshot/cower.tar.gz | tar -zx
 		pushd cower
-		makepkg -s PKGBUILD --install --noconfirm --ignorearch --skippgpcheck
+		makepkg -s PKGBUILD --install --noconfirm --ignorearch #--skippgpcheck
 		popd
 		rm -rf cower
 
@@ -242,6 +243,16 @@ install_desktop_environment() {
 
 	echo "exec mate-session" > ~/.xinitrc
 	sudo pacman -S --noconfirm network-manager-applet mate-disk-utility gnome-icon-theme
+
+	echo "Settings lock-screen background image to solid black"
+cat <<-'EOF' | sudo tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
+[org.mate.background]
+color-shading-type='solid'
+picture-options='scaled'
+picture-filename=''
+primary-color='#000000'
+EOF
+	sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
 
 	echo "fixing mate-menu icon for gnome icon theme"
 	mkdir -p ~/.icons/gnome/24x24/places
