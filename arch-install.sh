@@ -332,15 +332,16 @@ configure_system(){
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
 
 	echo "## updating localtime"
-	arch_chroot "ln -s /usr/share/zoneinfo/$zone/$subzone /etc/localtime"
+	arch_chroot "timedatectl set-timezone $zone/$subzone"
 	arch_chroot "hwclock --systohc --utc"
 
 	echo "## setting hostname"
-	echo $hostname > $mountpoint/etc/hostname
+	arch_chroot "hostnamectl set-hostname $hostname"
 }
 
 install_bootloader()
 {
+	# TODO : only if ! UEFI
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub memtest86+
 
