@@ -332,11 +332,12 @@ configure_system(){
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
 
 	echo "## updating localtime"
-	arch_chroot "timedatectl set-timezone $zone/$subzone"
+	arch_chroot "rm /etc/localtime"
+	arch_chroot "ln -s /usr/share/zoneinfo/$zone/$subzone /etc/localtime"
 	arch_chroot "hwclock --systohc --utc"
 
 	echo "## setting hostname"
-	arch_chroot "hostnamectl set-hostname $hostname"
+	echo $hostname > $mountpoint/etc/hostname
 }
 
 install_bootloader()
