@@ -260,6 +260,7 @@ update_mirrorlist() {
 }
 
 install_base(){
+	pacman-key --refresh-keys
 	echo "## installing base system"
 	pacstrap $mountpoint base base-devel dialog
 
