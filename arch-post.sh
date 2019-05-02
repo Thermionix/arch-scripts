@@ -23,8 +23,8 @@ enable_ssh(){
 }
 
 install_aur_helper() {
-	if ! command -v pacaur ; then
-		echo "## Installing pacaur AUR Helper"
+	if ! command -v yay ; then
+		echo "## Installing yay AUR Helper"
 
 		sudo pacman -Sy --noconfirm --needed wget base-devel
 
@@ -39,18 +39,11 @@ install_aur_helper() {
 			sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
 		fi
 		
-
-		curl https://aur.archlinux.org/cgit/aur.git/snapshot/cower.tar.gz | tar -zx
-		pushd cower
-		makepkg -s PKGBUILD --install --noconfirm --ignorearch #--skippgpcheck
-		popd
-		rm -rf cower
-
-		curl https://aur.archlinux.org/cgit/aur.git/snapshot/pacaur.tar.gz | tar -zx
-		pushd pacaur
+		curl https://aur.archlinux.org/cgit/aur.git/snapshot/yay.tar.gz | tar -zx
+		pushd yay
 		makepkg -s PKGBUILD --install --noconfirm
 		popd
-		rm -rf pacaur
+		rm -rf yay
 	fi
 
 	echo "Defaults passwd_timeout=0" | sudo tee /etc/sudoers.d/timeout
@@ -71,10 +64,7 @@ install_multilib_repo() {
 
 install_xorg() {
 	echo "## Installing Xorg"
-	sudo pacman -Sy --noconfirm xorg-server xorg-server-utils xorg-xinit mesa libtxc_dxtn
-	if [[ `uname -m` == x86_64 ]]; then
-		sudo pacman -S --noconfirm lib32-libtxc_dxtn
-	fi
+	sudo pacman -Sy --noconfirm xorg-server xorg-xinit
 }
 
 install_video_drivers() {
@@ -82,7 +72,6 @@ install_video_drivers() {
 	"1" "vesa (generic)" \
 	"2" "virtualbox" \
 	"3" "Intel" \
-	"4" "AMD proprietary (catalyst)" \
 	"5" "AMD open-source" \
 	"6" "NVIDIA open-source (nouveau)" \
 	"7" "NVIDIA proprietary" \
@@ -98,55 +87,11 @@ install_video_drivers() {
 		;;
 		3)
 			echo "## installing intel"
-			sudo pacman -S --noconfirm xf86-video-intel
+			sudo pacman -S --noconfirm xf86-video-intel vulkan-intel
 
 			if [[ `uname -m` == x86_64 ]]; then
 				sudo pacman -S --noconfirm lib32-intel-dri
 			fi
-		;;
-		4)
-			echo "## installing AMD proprietary (catalyst)"
-
-cat <<-'EOF' | sudo tee /etc/pacman.d/catalyst
-Server = http://catalyst.wirephire.com/repo/catalyst/$arch
-Server = http://70.239.162.206/catalyst-mirror/repo/catalyst/$arch
-Server = http://mirror.rts-informatique.fr/archlinux-catalyst/repo/catalyst/$arch
-Server = http://mirror.hactar.bz/Vi0L0/catalyst/$arch
-EOF
-
-			sudo pacman-key --keyserver pgp.mit.edu --recv-keys 0xabed422d653c3094
-			sudo pacman-key --lsign-key 0xabed422d653c3094
-
-			if ! grep -q "\[catalyst\]" /etc/pacman.conf ; then
-				echo -e "\n[catalyst]\nInclude = /etc/pacman.d/catalyst" | sudo tee --append /etc/pacman.conf
-			fi
-			 
-			sudo pacman -Syy
-
-			sudo pacman -S --noconfirm catalyst-hook catalyst-utils catalyst-libgl acpid
-
-			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S --noconfirm lib32-catalyst-utils lib32-catalyst-libgl
-			fi
-			 
-			sudo sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$# nomodeset\"#" /etc/default/grub
-			sudo grub-mkconfig -o /boot/grub/grub.cfg
-			 
-			echo "blacklist radeon" | sudo tee /etc/modprobe.d/blacklist-radeon.conf
-			echo -e "blacklist snd_hda_intel\nblacklist snd_hda_codec_hdmi" | sudo tee /etc/modprobe.d/blacklist-hdmi.conf
-
-			sudo systemctl enable atieventsd
-			sudo systemctl start atieventsd
-
-			sudo systemctl enable temp-links-catalyst
-			sudo systemctl start temp-links-catalyst
-			
-			sudo systemctl enable catalyst-hook
-			sudo systemctl start catalyst-hook
-
-			sudo aticonfig --initial
-			# aticonfig --initial=dual-head --screen-layout=left
-			# aticonfig --set-pcs-u32=DDX,EnableTearFreeDesktop,1
 		;;
 	    	5)
 			echo "## installing AMD open-source"
@@ -208,6 +153,8 @@ install_x_autostart() {
 
 paccache_cleanup() {
 
+sudo pacman -S --noconfirm pacman-contrib
+
 cat <<-'EOF' | sudo tee /etc/systemd/system/paccache-clean.timer
 [Unit]
 Description=Clean pacman cache weekly
@@ -248,7 +195,7 @@ install_desktop_environment() {
 	sudo pacman -S --noconfirm mate mate-extra pulseaudio
 
 	echo "exec mate-session" > ~/.xinitrc
-	sudo pacman -S --noconfirm network-manager-applet mate-disk-utility gnome-icon-theme
+	sudo pacman -S --noconfirm network-manager-applet gnome-icon-theme
 
 	echo "Settings lock-screen background image to solid black"
 cat <<-'EOF' | sudo tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
@@ -261,10 +208,11 @@ EOF
 	sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
 
 	echo "fixing mate-menu icon for gnome icon theme"
-	mkdir -p ~/.icons/gnome/24x24/places
-	wget -O ~/.icons/gnome/24x24/places/start-here.png http://i.imgur.com/vBpJDs7.png
 
-	pacaur -S --noedit --noconfirm adwaita-x-dark-and-light-theme
+	sudo wget -O /usr/share/pixmaps/arch-menu.png http://i.imgur.com/vBpJDs7.png
+	gsettings set org.mate.panel.menubar icon-name arch-menu
+
+	yay -S --noconfirm adwaita-x-dark-and-light-theme
 }
 
 check_notroot
