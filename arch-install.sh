@@ -94,7 +94,8 @@ partition_disk() {
 		esp_end=1
 	fi
 
-	boot_end=$(( ${esp_end} + 500 ))
+	boot_size=$(whiptail --nocancel --inputbox "Set boot partition size:" 10 40 "500" 3>&1 1>&2 2>&3)
+	boot_end=$(( ${esp_end} + ${boot_size} ))
 
 	if $enable_swap ; then
 		swap_end=$(( $boot_end + ${swap_size} ))
