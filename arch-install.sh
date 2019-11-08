@@ -28,7 +28,7 @@ set_variables() {
 	subzone=$(whiptail --nocancel --inputbox "Set subzone:" 10 40 "Melbourne" 3>&1 1>&2 2>&3)
 	country=$(whiptail --nocancel --inputbox "Set mirrorlist country code:" 10 40 "AU" 3>&1 1>&2 2>&3)
 
-	new_uuid=$(cat /sys/devices/virtual/dmi/id/board_name)
+	new_uuid=$(cat /sys/devices/virtual/dmi/id/product_serial)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
 
 	# [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
