@@ -36,6 +36,11 @@ set_variables() {
 	if whiptail --defaultno --yesno "install for UEFI system?" 8 40 ; then
 		enable_uefi=true
 	fi
+
+	enable_lts=false
+	if whiptail --defaultno --yesno "install linux-lts kernel (long term support)?" 8 40 ; then
+		enable_lts=true
+	fi
 }
 
 update_locale() {
@@ -263,7 +268,12 @@ update_mirrorlist() {
 install_base(){
 	pacman-key --refresh-keys
 	echo "## installing base system"
-	pacstrap $mountpoint base base-devel dialog
+	pacstrap $mountpoint base 
+	if ! $enable_lts ; then
+		pacstrap $mountpoint linux linux-firmware
+	else
+		pacstrap $mountpoint linux-lts linux-lts-headers linux-firmware
+	fi
 
 	if `cat /proc/cpuinfo | grep vendor_id | grep -iq intel` ; then
 		echo "## installing intel ucode"
@@ -334,7 +344,6 @@ configure_system(){
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
 
 	echo "## updating localtime"
-	arch_chroot "rm /etc/localtime"
 	arch_chroot "ln -s /usr/share/zoneinfo/$zone/$subzone /etc/localtime"
 	arch_chroot "hwclock --systohc --utc"
 
@@ -399,8 +408,7 @@ install_network_daemon() {
 
 	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
 	"1" "NetworkManager" \
-	"2" "dhcpcd" \
-	"3" "bonding (netctl)" \
+	"2" "systemd-networkd"
 	3>&1 1>&2 2>&3) in
 		1)
 			echo "## installing networkmanager"
@@ -409,16 +417,9 @@ install_network_daemon() {
 			enable_networkmanager=true
 		;;
     	2)
-			echo "## enabling dhcpcd"
-			arch_chroot "systemctl enable dhcpcd.service"
-		;;
-		3)
-			echo "#installing netctl"
-			pacstrap $mountpoint netctl ifenslave
-			cp $mountpoint/etc/netctl/examples/bonding $mountpoint/etc/netctl/bonding
-			# append interface names in comment into $mountpoint/etc/netctl/bonding
-			nano $mountpoint/etc/netctl/bonding
-			#arch_chroot "netctl enable profile"
+			echo "## enabling systemd-networkd"
+			arch_chroot "systemctl enable systemd-networkd.service"
+			echo "## read https://wiki.archlinux.org/index.php/Systemd-networkd for configuration"
 	esac	
 }
 
