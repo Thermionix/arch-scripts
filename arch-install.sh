@@ -281,7 +281,7 @@ install_base(){
 	fi
 
 	if `cat /proc/cpuinfo | grep vendor_id | grep -iq amd` ; then
-		echo "## installing intel ucode"
+		echo "## installing amd ucode"
 		pacstrap $mountpoint amd-ucode
 	fi
 }
