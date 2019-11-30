@@ -1,4 +1,10 @@
 arch-scripts
 ============
 
-scripts for arch linux setup
+script for arch linux setup
+
+from booted arch install iso;
+```
+$ wget https://raw.githubusercontent.com/Thermionix/arch-scripts/master/arch-install.sh
+$ bash arch-install.sh
+```
