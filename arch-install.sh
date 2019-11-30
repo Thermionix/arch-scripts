@@ -71,11 +71,11 @@ set_variables() {
 	enable_ntpd=false
 	enable_sshd=false
 	if [ $setup_network != false ] ; then
-		if whiptail --yesno "enable network time daemon?" 8 40 ; then
+		if whiptail --defaultyes --yesno "enable network time daemon?" 8 40 ; then
 			enable_ntpd=true
 		fi
 
-		if whiptail --yesno "enable ssh daemon?" 8 40 ; then
+		if whiptail --defaultno --yesno "enable ssh daemon?" 8 40 ; then
 			enable_sshd=true
 		fi
 	fi
@@ -84,6 +84,8 @@ set_variables() {
 	if whiptail --defaultno --yesno "install AUR helper (yay)?" 8 40 ; then
 		install_aur=true
 	fi
+
+	#TODO: install desktop / video driver / checklist of software
 }
 
 update_locale() {
@@ -222,17 +224,17 @@ format_disk() {
 	mountpoint="/mnt"
 
 	enable_luks=false
-	if whiptail --defaultno --yesno "encrypt root and swap partitions?" 8 40 ; then
+	if whiptail --defaultno --yesno "encrypt disk with dm-crypt (kernel transparent disk encryption)?" 8 40 ; then
 		enable_luks=true
 	fi
 
 	enable_bcache=false
-	if ! $enable_luks ; then
+	#if ! $enable_luks ; then
 		# TODO : revamp bcache setup - hasn't been tested in a few years
 		#if whiptail --defaultno --yesno "setup bcache?" 8 40 ; then
 		#	enable_bcache=true
 		#fi
-	fi
+	#fi
 
 	if $enable_bcache ; then
 		pacman -Sy --noconfirm git
@@ -445,9 +447,9 @@ install_bootloader()
 
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
-	if $enable_luks ; then
-		whiptail --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
-	fi
+	#if $enable_luks ; then
+	#	whiptail --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
+	#fi
 }
 
 create_user() {
@@ -455,8 +457,8 @@ create_user() {
 		echo "## adding user: $username"
 		pacstrap $mountpoint sudo
 		arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
-		echo "## set password for user: $username"
-		printf "$userpass\n$userpass" | arch-chroot $mountpoint "passwd $username"
+		echo "## setting password for user $username"
+		arch-chroot $mountpoint "printf \"$userpass\n$userpass\" | passwd $username"
 		sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 
 		if ! grep -q "EDITOR" $mountpoint/home/$username/.bashrc ; then 
@@ -561,50 +563,37 @@ install_video_drivers() {
 	"1" "vesa (generic)" \
 	"2" "virtualbox" \
 	"3" "Intel" \
-	"5" "AMD open-source" \
-	"6" "NVIDIA open-source (nouveau)" \
-	"7" "NVIDIA proprietary" \
-	"8" "Raspberry Pi (fbdev)" \
+	"5" "AMD" \
+	"6" "NVIDIA (nouveau)" \
 	3>&1 1>&2 2>&3) in
 		1)
 			echo "## installing vesa"
-			sudo pacman -S --noconfirm xf86-video-vesa
+			pacstrap $mountpoint xf86-video-vesa
 		;;
 		2)
 			echo "## installing virtualbox"
-			sudo pacman -S --noconfirm virtualbox-guest-utils
+			pacstrap $mountpoint virtualbox-guest-utils
 		;;
 		3)
 			echo "## installing intel"
-			sudo pacman -S --noconfirm xf86-video-intel vulkan-intel
+			pacstrap $mountpoint xf86-video-intel vulkan-intel
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S --noconfirm lib32-intel-dri
+				pacstrap $mountpoint lib32-intel-dri
 			fi
 		;;
-	    	5)
-			echo "## installing AMD open-source"
-			sudo pacman -S --noconfirm xf86-video-ati
+    	5)
+			echo "## installing AMD"
+			pacstrap $mountpoint xf86-video-ati
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S --noconfirm lib32-ati-dri
+				pacstrap $mountpoint lib32-ati-dri
 			fi
 		;;
 		6)
 			echo "## installing NVIDIA open-source (nouveau)"
-			sudo pacman -S --noconfirm xf86-video-nouveau
+			pacstrap $mountpoint xf86-video-nouveau
 			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S --noconfirm lib32-nouveau-dri
+				pacstrap $mountpoint lib32-nouveau-dri
 			fi
-		;;
-		7)
-			echo "## installing NVIDIA proprietary"
-			sudo pacman -S --noconfirm nvidia
-			if [[ `uname -m` == x86_64 ]]; then
-				sudo pacman -S --noconfirm lib32-nvidia-libgl
-			fi
-		;;
-		8)
-			echo "## installing driver for Raspberry Pi (fbdev)"
-			sudo pacman -S --noconfirm xf86-video-fbdev
 		;;
 	esac
 }
@@ -612,33 +601,28 @@ install_video_drivers() {
 install_desktop_environment() {
 	#TODO : FIX THIS
 
-	sudo pacman -Sy --noconfirm xorg-server xorg-xinit
+	pacstrap $mountpoint xorg-server xorg-xinit mate mate-extra pulseaudio network-manager-applet gnome-icon-theme
 
-
-	sudo pacman -S --noconfirm mate mate-extra pulseaudio
-
-	echo "exec mate-session" > ~/.xinitrc
-	sudo pacman -S --noconfirm network-manager-applet gnome-icon-theme
+	echo "exec mate-session" > $mountpoint/home/$username/.xinitrc
 
 	echo "Settings lock-screen background image to solid black"
-cat <<-'EOF' | sudo tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
+cat <<-'EOF' | tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
 [org.mate.background]
 color-shading-type='solid'
 picture-options='scaled'
 picture-filename=''
 primary-color='#000000'
 EOF
-	sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
+	glib-compile-schemas /usr/share/glib-2.0/schemas/
 
 	echo "fixing mate-menu icon for gnome icon theme"
-
 	sudo wget -O /usr/share/pixmaps/arch-menu.png http://i.imgur.com/vBpJDs7.png
 	gsettings set org.mate.panel.menubar icon-name arch-menu
 
 	#yay -S --noconfirm adwaita-x-dark-and-light-theme
 
 	echo "## Installing Fonts"
-	sudo pacman -S --noconfirm ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
+	pacstrap $mountpoint ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
 
 	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
@@ -653,6 +637,34 @@ EOF
 		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
 		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
 	fi
+
+	if ! grep -q "complete -cf sudo" ~/.bashrc ; then 
+		echo "complete -cf sudo" >> ~/.bashrc
+	fi
+	if ! grep -q "bash_aliases" ~/.bashrc ; then 
+		echo -e "if [ -f ~/.bash_aliases ]; then\n. ~/.bash_aliases\nfi" >> ~/.bashrc
+	fi
+	if ! grep -q "yolo" ~/.bash_aliases ; then 
+		echo "alias generate-playlist='ls -1 *.mp3 > \"\${PWD##*/}\".m3u'" >> ~/.bash_aliases
+	fi
+
+	# steam syncthing
+	sudo pacman -S firefox vlc geary openssh 
+	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted
+	sudo pacman -S gimp youtube-dl tmux screenfetch	
+	sudo pacman -S exfat-utils fuse-exfat dosfstools
+	sudo pacman -S libreoffice-fresh brasero
+
+	sudo pacman -S gvfs-mtp libmtp android-tools android-udev heimdall
+	sudo gpasswd -a `whoami` uucp
+	sudo gpasswd -a `whoami` adbusers
+}
+
+install_docker() {
+	sudo pacman -S docker
+	sudo gpasswd -a `whoami` docker
+	sudo systemctl start docker.service
+	sudo systemctl enable docker.service
 }
 
 finish_setup() {
