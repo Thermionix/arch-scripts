@@ -457,13 +457,14 @@ create_user() {
 		echo "## adding user: $username"
 		pacstrap $mountpoint sudo
 		arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
+
 		echo "## setting password for user $username"
-		arch-chroot $mountpoint "printf \"$userpass\n$userpass\" | passwd $username"
+		arch_chroot "printf \"$userpass\n$userpass\" | passwd $username"
+
+		echo "## allowing wheel group as sudoers"
 		sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 
-		if ! grep -q "EDITOR" $mountpoint/home/$username/.bashrc ; then 
-			echo "export EDITOR=\"nano\"" >> $mountpoint/home/$username/.bashrc
-		fi
+		echo "export EDITOR=\"nano\"" >> $mountpoint/home/$username/.bashrc
 	fi
 }
 
@@ -649,22 +650,22 @@ EOF
 	fi
 
 	# steam syncthing
-	sudo pacman -S firefox vlc geary openssh 
+	sudo pacman -S firefox vlc geary openssh sshfs
 	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted
-	sudo pacman -S gimp youtube-dl tmux screenfetch	
+	sudo pacman -S gimp youtube-dl tmux inkscape
 	sudo pacman -S exfat-utils fuse-exfat dosfstools
-	sudo pacman -S libreoffice-fresh brasero
+	sudo pacman -S libreoffice-fresh brasero keepassxc
 
 	sudo pacman -S gvfs-mtp libmtp android-tools android-udev heimdall
 	sudo gpasswd -a `whoami` uucp
 	sudo gpasswd -a `whoami` adbusers
-}
 
-install_docker() {
 	sudo pacman -S docker
 	sudo gpasswd -a `whoami` docker
 	sudo systemctl start docker.service
 	sudo systemctl enable docker.service
+
+	# virtualbox
 }
 
 finish_setup() {
