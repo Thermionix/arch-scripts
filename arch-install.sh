@@ -3,10 +3,14 @@
 set -e
 command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
 
-cehck_net_connectivity() {
+check_net_connectivity() {
 	echo "## checking net connectivity"
 	ping -c 2 resolver1.opendns.com
+	# TODO : offer wifimenu ?
+
 	#ip route add default via <gw-ip>
+	echo "## ensuring the system clock is accurate"
+	timedatectl set-ntp true
 }
 
 enable_ssh() {
@@ -20,17 +24,18 @@ enable_ssh() {
 set_variables() {
 	echo "## defining variables for installation"
 
+	# TODO : offer UTF locale list selection
 	# cat /etc/locale.gen | grep -oP "^#\K[a-zA-Z0-9@._-]+"
 	locale=$(whiptail --nocancel --inputbox "Set locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
 
 	keyboard=$(whiptail --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
-	zone=$(whiptail --nocancel --inputbox "Set zone:" 10 40 "Australia" 3>&1 1>&2 2>&3)
-	subzone=$(whiptail --nocancel --inputbox "Set subzone:" 10 40 "Melbourne" 3>&1 1>&2 2>&3)
-	country=$(whiptail --nocancel --inputbox "Set mirrorlist country code:" 10 40 "AU" 3>&1 1>&2 2>&3)
+
+	selected_timezone=$(tzselect)
 
 	new_uuid=$(cat /sys/devices/virtual/dmi/id/product_serial)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
 
+	# TODO : don't offer UEFI if not present
 	# [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
 	enable_uefi=false
 	if whiptail --defaultno --yesno "install for UEFI system?" 8 40 ; then
@@ -40,6 +45,44 @@ set_variables() {
 	enable_lts=false
 	if whiptail --defaultno --yesno "install linux-lts kernel (long term support)?" 8 40 ; then
 		enable_lts=true
+	fi
+
+	create_user=false
+	if whiptail --yesno "create a user for this installation?" 8 40 ; then
+		create_user=true
+		username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
+		userpass=$(whiptail --nocancel --passwordbox "Set password:" 10 40 3>&1 1>&2 2>&3)
+	fi
+
+	setup_network=false
+	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
+	"1" "NetworkManager" \
+	"2" "systemd-networkd" \
+	"3" "None" \
+	3>&1 1>&2 2>&3) in
+		1)
+			setup_network="networkmanager"
+		;;
+		2)
+			setup_network="networkd"
+		;;
+	esac
+
+	enable_ntpd=false
+	enable_sshd=false
+	if [ $setup_network != false ] ; then
+		if whiptail --yesno "enable network time daemon?" 8 40 ; then
+			enable_ntpd=true
+		fi
+
+		if whiptail --yesno "enable ssh daemon?" 8 40 ; then
+			enable_sshd=true
+		fi
+	fi
+
+	install_aur=false
+	if whiptail --defaultno --yesno "install AUR helper (yay)?" 8 40 ; then
+		install_aur=true
 	fi
 }
 
@@ -185,9 +228,10 @@ format_disk() {
 
 	enable_bcache=false
 	if ! $enable_luks ; then
-		if whiptail --defaultno --yesno "setup bcache?" 8 40 ; then
-			enable_bcache=true
-		fi
+		# TODO : revamp bcache setup - hasn't been tested in a few years
+		#if whiptail --defaultno --yesno "setup bcache?" 8 40 ; then
+		#	enable_bcache=true
+		#fi
 	fi
 
 	if $enable_bcache ; then
@@ -243,26 +287,22 @@ format_disk() {
 }
 
 update_mirrorlist() {
-	echo "## attempting to download mirrorlist for country: ${country}"
-	mirrorlist_url="https://www.archlinux.org/mirrorlist/?country=${country}&use_mirror_status=on"
+	echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
+}
 
-	mirrorlist_tmp=$(mktemp --suffix=-mirrorlist)
-	curl -so ${mirrorlist_tmp} ${mirrorlist_url}
-	sed -i 's/^#Server/Server/g' ${mirrorlist_tmp}
+update_mirrorlist_reflector() {
+	# TODO
+	# /etc/pacman.d/hooks/mirrorupgrade.hook
 
-	if [[ -s ${mirrorlist_tmp} ]]; then
-		echo "## rotating the new list into place"
-		mv -i /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
-		mv -i ${mirrorlist_tmp} /etc/pacman.d/mirrorlist
-	else
-		echo "## could not download list, ranking original mirrorlist"
-		cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-		sed '/^#\S/ s|#||' -i /etc/pacman.d/mirrorlist.backup
-		rankmirrors --verbose -n 6 /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist
-	fi
+	pacstrap $mountpoint reflector
 
-	chmod +r /etc/pacman.d/mirrorlist
-	nano /etc/pacman.d/mirrorlist
+	shopt -s lastpipe
+	reflector --list-countries | \
+	sed 's/[0-9]*//g;s/\(.*\)\([A-Z][A-Z]\)/\2\n\1/g' | \
+	readarray countries
+	selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 30 78 22 "${countries[@]}" 3>&1 1>&2 2>&3)
+
+	reflector -c $selected_country -l 5 --sort rate --save /etc/pacman.d/mirrorlist
 }
 
 install_base(){
@@ -286,6 +326,19 @@ install_base(){
 	fi
 }
 
+install_multilib_repo() {
+	# TODO : FIX THIS
+	if [[ `uname -m` == x86_64 ]]; then
+		echo "## x86_64 detected, adding multilib repository"
+		if ! grep -q "\[multilib\]" /etc/pacman.conf ; then
+			echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
+		else
+			sudo sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
+		fi
+		sudo pacman -Syy
+	fi
+}
+
 configure_fstab(){
 	echo "## generating fstab entries"
 	genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
@@ -306,14 +359,6 @@ configure_fstab(){
 			if $enable_swap ; then
 				sed -i -e 's/swap,/swap,discard,/' $mountpoint/etc/crypttab
 			fi
-		fi
-	fi
-
-	nano $mountpoint/etc/fstab
-
-	if $enable_luks ; then
-		if $enable_swap ; then
-			nano $mountpoint/etc/crypttab
 		fi
 	fi
 }
@@ -349,18 +394,24 @@ configure_system(){
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
 
 	echo "## updating localtime"
-	arch_chroot "ln -s /usr/share/zoneinfo/$zone/$subzone /etc/localtime"
+	arch_chroot "ln -s /usr/share/zoneinfo/$selected_timezone /etc/localtime"
 	arch_chroot "hwclock --systohc --utc"
 
 	echo "## setting hostname"
 	echo $hostname > $mountpoint/etc/hostname
+
+	echo "## enabling haveged for better randomness"
+	pacstrap $mountpoint haveged
+	arch_chroot "systemctl enable haveged"
+
+	echo "## disabling root login"
+	arch_chroot "passwd -l root"
 }
 
 install_bootloader()
 {
-	# TODO : only if ! UEFI
 	echo "## installing grub to ${DSK}"
-	pacstrap $mountpoint grub memtest86+
+	pacstrap $mountpoint grub 
 
 	#/etc/machine-id 
 	#uname -r
@@ -370,6 +421,7 @@ install_bootloader()
 		pacstrap $mountpoint dosfstools efibootmgr
 		arch_chroot "grub-install --efi-directory=/boot/efi --target=x86_64-efi --bootloader-id=grub_uefi --recheck"
 	else
+		pacstrap $mountpoint memtest86+ 
 		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
 	fi
 
@@ -388,7 +440,9 @@ install_bootloader()
 		echo -e "\nGRUB_DISABLE_SUBMENU=y" | sudo tee --append $mountpoint/etc/default/grub
 	fi
 
-	nano $mountpoint/etc/default/grub
+	echo "## printing /etc/default/grub"
+	cat $mountpoint/etc/default/grub
+
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
 	if $enable_luks ; then
@@ -397,39 +451,36 @@ install_bootloader()
 }
 
 create_user() {
-	if whiptail --yesno "create a user for this installation?" 8 40 ; then
-		username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
+	if $create_user ; then
 		echo "## adding user: $username"
 		pacstrap $mountpoint sudo
 		arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
 		echo "## set password for user: $username"
-		arch_chroot "passwd $username"
+		printf "$userpass\n$userpass" | arch-chroot $mountpoint "passwd $username"
 		sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
+
+		if ! grep -q "EDITOR" $mountpoint/home/$username/.bashrc ; then 
+			echo "export EDITOR=\"nano\"" >> $mountpoint/home/$username/.bashrc
+		fi
 	fi
 }
 
 install_network_daemon() {
 	enable_networkmanager=false
-
-	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
-	"1" "NetworkManager" \
-	"2" "systemd-networkd"
-	3>&1 1>&2 2>&3) in
-		1)
-			echo "## installing networkmanager"
+	if [ $setup_network == "networkmanager" ] ; then
+			echo "## installing NetworkManager"
 			pacstrap $mountpoint networkmanager
 			arch_chroot "systemctl enable NetworkManager && systemctl enable NetworkManager-dispatcher.service"
 			enable_networkmanager=true
-		;;
-    	2)
+	elif [ $setup_network == "networkd" ] ; then
 			echo "## enabling systemd-networkd"
 			arch_chroot "systemctl enable systemd-networkd.service"
 			echo "## read https://wiki.archlinux.org/index.php/Systemd-networkd for configuration"
-	esac	
+	fi
 }
 
 enable_ntpd() {
-	if whiptail --yesno "enable network time daemon?" 8 40 ; then
+	if $enable_ntpd ; then
 		echo "## enabling network time daemon"
 		pacstrap $mountpoint ntp
 
@@ -444,14 +495,168 @@ enable_ntpd() {
 }
 
 enable_sshd() {
-	if whiptail --yesno "enable ssh daemon?" 8 40 ; then
+	if $enable_sshd ; then
 		pacstrap $mountpoint openssh
 		arch_chroot "systemctl enable sshd.service"
 	fi
 }
 
+paccache_cleanup() {
+pacstrap $mountpoint pacman-contrib
+
+cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.timer
+[Unit]
+Description=Clean pacman cache weekly
+
+[Timer]
+OnBootSec=10min
+OnCalendar=weekly
+Persistent=true     
+ 
+[Install]
+WantedBy=timers.target
+EOF
+
+cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.service
+[Unit]
+Description=Clean pacman cache
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/paccache -rk2
+ExecStart=/usr/bin/paccache -ruk0
+EOF
+
+arch_chroot "systemctl enable paccache-clean.timer"
+}
+
+install_aur_helper() {
+	if $install_aur ; then
+		echo "## Installing yay AUR Helper"
+
+		#gpg --list-keys
+		#if [ ! -f ~/.gnupg/gpg.conf ] ; then
+		#	echo "keyserver-options auto-key-retrieve" > ~/.gnupg/gpg.conf
+		#else
+		#	sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
+		#fi
+
+		curl https://aur.archlinux.org/cgit/aur.git/snapshot/yay.tar.gz | tar -zx --directory=/tmp
+		pushd /tmp/yay
+		chown -R nobody .
+		sudo -u nobody makepkg --noconfirm
+		popd
+		cp /tmp/yay/*.pkg.tar.xz $mountpoint/var/cache/pacman/pkg/
+		arch_chroot "pacman -U /var/cache/pacman/pkg/yay* --noconfirm"
+
+		echo "Defaults passwd_timeout=0" | tee $mountpoint/etc/sudoers.d/timeout
+		echo 'Defaults editor=/usr/bin/nano, !env_editor' | tee $mountpoint/etc/sudoers.d/nano
+	fi
+}
+
+install_video_drivers() {
+	#TODO : FIX THIS
+
+	case $(whiptail --menu "Choose a video driver" 20 60 12 \
+	"1" "vesa (generic)" \
+	"2" "virtualbox" \
+	"3" "Intel" \
+	"5" "AMD open-source" \
+	"6" "NVIDIA open-source (nouveau)" \
+	"7" "NVIDIA proprietary" \
+	"8" "Raspberry Pi (fbdev)" \
+	3>&1 1>&2 2>&3) in
+		1)
+			echo "## installing vesa"
+			sudo pacman -S --noconfirm xf86-video-vesa
+		;;
+		2)
+			echo "## installing virtualbox"
+			sudo pacman -S --noconfirm virtualbox-guest-utils
+		;;
+		3)
+			echo "## installing intel"
+			sudo pacman -S --noconfirm xf86-video-intel vulkan-intel
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S --noconfirm lib32-intel-dri
+			fi
+		;;
+	    	5)
+			echo "## installing AMD open-source"
+			sudo pacman -S --noconfirm xf86-video-ati
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S --noconfirm lib32-ati-dri
+			fi
+		;;
+		6)
+			echo "## installing NVIDIA open-source (nouveau)"
+			sudo pacman -S --noconfirm xf86-video-nouveau
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S --noconfirm lib32-nouveau-dri
+			fi
+		;;
+		7)
+			echo "## installing NVIDIA proprietary"
+			sudo pacman -S --noconfirm nvidia
+			if [[ `uname -m` == x86_64 ]]; then
+				sudo pacman -S --noconfirm lib32-nvidia-libgl
+			fi
+		;;
+		8)
+			echo "## installing driver for Raspberry Pi (fbdev)"
+			sudo pacman -S --noconfirm xf86-video-fbdev
+		;;
+	esac
+}
+
+install_desktop_environment() {
+	#TODO : FIX THIS
+
+	sudo pacman -Sy --noconfirm xorg-server xorg-xinit
+
+
+	sudo pacman -S --noconfirm mate mate-extra pulseaudio
+
+	echo "exec mate-session" > ~/.xinitrc
+	sudo pacman -S --noconfirm network-manager-applet gnome-icon-theme
+
+	echo "Settings lock-screen background image to solid black"
+cat <<-'EOF' | sudo tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
+[org.mate.background]
+color-shading-type='solid'
+picture-options='scaled'
+picture-filename=''
+primary-color='#000000'
+EOF
+	sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
+
+	echo "fixing mate-menu icon for gnome icon theme"
+
+	sudo wget -O /usr/share/pixmaps/arch-menu.png http://i.imgur.com/vBpJDs7.png
+	gsettings set org.mate.panel.menubar icon-name arch-menu
+
+	#yay -S --noconfirm adwaita-x-dark-and-light-theme
+
+	echo "## Installing Fonts"
+	sudo pacman -S --noconfirm ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
+	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
+
+	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
+		echo "## enabling autologin for user: $username"
+		sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" \
+			| sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
+	fi
+
+	echo "## Installing X Autostart"
+	if ! grep -q "exec startx" ~/.bash_profile ; then 
+		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
+		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
+	fi
+}
+
 finish_setup() {
-	# offer to umount | reboot | poweroff | do nothing
+	#TODO: offer to umount | reboot | poweroff | do nothing
 	if whiptail --yesno "Reboot now?" 8 40 ; then
 		echo "## unmounting and rebooting"
 
@@ -469,6 +674,8 @@ finish_setup() {
 	fi
 }
 
+
+check_net_connectivity
 set_variables
 update_locale
 update_mirrorlist
@@ -482,4 +689,6 @@ create_user
 install_network_daemon
 enable_ntpd
 enable_sshd
-finish_setup
+paccache_cleanup
+install_aur_helper
+#finish_setup
