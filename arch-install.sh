@@ -8,6 +8,7 @@ check_net_connectivity() {
 	ping -c 2 resolver1.opendns.com
 	# TODO : offer wifimenu ?
 
+	# TODO : check default gateway is set?
 	#ip route add default via <gw-ip>
 	echo "## ensuring the system clock is accurate"
 	timedatectl set-ntp true
@@ -25,45 +26,42 @@ set_variables() {
 	echo "## defining variables for installation"
 
 	# TODO : offer UTF locale list selection
-	# cat /etc/locale.gen | grep -oP "^#\K[a-zA-Z0-9@._-]+"
-	locale=$(whiptail --nocancel --inputbox "Set locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
+	# cat /etc/locale.gen | grep "UTF-8" | grep -oP "^#\K[a-zA-Z0-9@._-]+"
+	locale=$(whiptail --nocancel --inputbox "Select locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
 
 	keyboard=$(whiptail --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
 
 	selected_timezone=$(tzselect)
 
-	new_uuid=$(cat /sys/devices/virtual/dmi/id/product_serial)
-	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-$new_uuid" 3>&1 1>&2 2>&3)
+	#new_uuid=$(cat /sys/devices/virtual/dmi/id/product_serial)
+	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-box" 3>&1 1>&2 2>&3)
 
-	# TODO : don't offer UEFI if not present
-	# [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
 	enable_uefi=false
-	if whiptail --defaultno --yesno "install for UEFI system?" 8 40 ; then
-		enable_uefi=true
+	if [ -d /sys/firmware/efi ] ; then
+		if whiptail --yesno "Detected booted in UEFI mode\nInstall for UEFI system?" 8 40 ; then
+			enable_uefi=true
+		fi
 	fi
 
 	enable_lts=false
-	if whiptail --defaultno --yesno "install linux-lts kernel (long term support)?" 8 40 ; then
+	if whiptail --defaultno --yesno "Install linux-lts kernel?\n(long-term support stable/server orientated)" 8 60 ; then
 		enable_lts=true
 	fi
 
-	create_user=false
-	if whiptail --yesno "create a user for this installation?" 8 40 ; then
-		create_user=true
-		username=$(whiptail --nocancel --inputbox "Set username:" 10 40 "$new_uuid" 3>&1 1>&2 2>&3)
-		userpass=$(whiptail --nocancel --passwordbox "Set password:" 10 40 3>&1 1>&2 2>&3)
-	fi
+	username=$(whiptail --nocancel --inputbox "Set username for sudo user to be created for this install" 10 40 3>&1 1>&2 2>&3)
+	# TODO : confirm and compare password twice
+	userpass=$(whiptail --nocancel --passwordbox "Set password for $username" 10 40 3>&1 1>&2 2>&3)
 
 	setup_network=false
-	case $(whiptail --menu "Choose a network daemon" 20 60 12 \
-	"1" "NetworkManager" \
-	"2" "systemd-networkd" \
-	"3" "None" \
+	case $(whiptail --nocancel --menu "Choose a network daemon" 20 60 12 \
+	"NetworkManager" "(Desktop Orientated)" \
+	"systemd-networkd" "(Headless/Server)" \
+	"None" "" \
 	3>&1 1>&2 2>&3) in
-		1)
+		NetworkManager)
 			setup_network="networkmanager"
 		;;
-		2)
+		systemd-networkd)
 			setup_network="networkd"
 		;;
 	esac
@@ -71,17 +69,17 @@ set_variables() {
 	enable_ntpd=false
 	enable_sshd=false
 	if [ $setup_network != false ] ; then
-		if whiptail --defaultyes --yesno "enable network time daemon?" 8 40 ; then
+		if whiptail --yesno "Enable network time daemon?\n(synchronize software clock with internet time servers)" 8 60 ; then
 			enable_ntpd=true
 		fi
 
-		if whiptail --defaultno --yesno "enable ssh daemon?" 8 40 ; then
+		if whiptail --defaultno --yesno "Enable sshd.service?\n(Open Secure Shell daemon)" 8 40 ; then
 			enable_sshd=true
 		fi
 	fi
 
 	install_aur=false
-	if whiptail --defaultno --yesno "install AUR helper (yay)?" 8 40 ; then
+	if whiptail --defaultno --yesno "Install AUR helper (yay)?" 8 40 ; then
 		install_aur=true
 	fi
 
@@ -112,7 +110,8 @@ partition_disk() {
 
 	enable_gpt=true
 	if ! $enable_uefi ; then
-		if ! whiptail --defaultno --yesno "use GPT partitioning?" 8 40 ; then
+		# https://wiki.archlinux.org/index.php/Partitioning
+		if ! whiptail --yesno "use GPT partitioning?" 8 40 ; then
 			enable_gpt=false
 		fi
 	fi
@@ -144,7 +143,7 @@ partition_disk() {
 		esp_end=1
 	fi
 
-	boot_size=$(whiptail --nocancel --inputbox "Set boot partition size:" 10 40 "500" 3>&1 1>&2 2>&3)
+	boot_size=$(whiptail --nocancel --inputbox "Set boot partition size:" 10 40 "200" 3>&1 1>&2 2>&3)
 	boot_end=$(( ${esp_end} + ${boot_size} ))
 
 	if $enable_swap ; then
@@ -224,7 +223,7 @@ format_disk() {
 	mountpoint="/mnt"
 
 	enable_luks=false
-	if whiptail --defaultno --yesno "encrypt disk with dm-crypt (kernel transparent disk encryption)?" 8 40 ; then
+	if whiptail --defaultno --yesno "encrypt entire disk with dm-crypt?\n(kernel transparent disk encryption)" 8 40 ; then
 		enable_luks=true
 	fi
 
@@ -293,9 +292,6 @@ update_mirrorlist() {
 }
 
 update_mirrorlist_reflector() {
-	# TODO
-	# /etc/pacman.d/hooks/mirrorupgrade.hook
-
 	pacstrap $mountpoint reflector
 
 	shopt -s lastpipe
@@ -305,16 +301,30 @@ update_mirrorlist_reflector() {
 	selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 30 78 22 "${countries[@]}" 3>&1 1>&2 2>&3)
 
 	reflector -c $selected_country -l 5 --sort rate --save /etc/pacman.d/mirrorlist
+
+	# if selected_country == null set to United States
+
+cat <<-'EOF' | tee $mountpoint/etc/pacman.d/hooks/mirrorupgrade.hook
+[Trigger]
+Operation = Upgrade
+Type = Package
+Target = pacman-mirrorlist
+
+[Action]
+Description = Updating pacman-mirrorlist with reflector and removing pacnew...
+When = PostTransaction
+Depends = reflector
+Exec = /bin/sh -c "reflector --country 'United States' --latest 10 --age 24 --sort rate --save /etc/pacman.d/mirrorlist; rm -f /etc/pacman.d/mirrorlist.pacnew"
+EOF
 }
 
 install_base(){
 	pacman-key --refresh-keys
 	echo "## installing base system"
-	pacstrap $mountpoint base 
 	if ! $enable_lts ; then
-		pacstrap $mountpoint linux linux-firmware
+		pacstrap $mountpoint base linux linux-firmware
 	else
-		pacstrap $mountpoint linux-lts linux-lts-headers linux-firmware
+		pacstrap $mountpoint base linux-lts linux-firmware
 	fi
 
 	if `cat /proc/cpuinfo | grep vendor_id | grep -iq intel` ; then
@@ -445,27 +455,27 @@ install_bootloader()
 	echo "## printing /etc/default/grub"
 	cat $mountpoint/etc/default/grub
 
+	echo "## generating /boot/grub/grub.cfg"
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
-	#if $enable_luks ; then
-	#	whiptail --title "check cryptdevice in grub.cfg" --msgbox "`cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"`" 20 80
-	#fi
+	if $enable_luks ; then
+		echo "## printing cryptdevice line from /boot/grub/grub.cfg"
+		cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"
+	fi
 }
 
 create_user() {
-	if $create_user ; then
-		echo "## adding user: $username"
-		pacstrap $mountpoint sudo
-		arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
+	echo "## adding user: $username"
+	pacstrap $mountpoint sudo
+	arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
 
-		echo "## setting password for user $username"
-		arch_chroot "printf \"$userpass\n$userpass\" | passwd $username"
+	echo "## setting password for user $username"
+	arch_chroot "printf \"$userpass\n$userpass\" | passwd $username"
 
-		echo "## allowing wheel group as sudoers"
-		sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
+	echo "## allowing wheel group as sudoers"
+	sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 
-		echo "export EDITOR=\"nano\"" >> $mountpoint/home/$username/.bashrc
-	fi
+	echo "export EDITOR=\"nano\"" >> $mountpoint/home/$username/.bashrc
 }
 
 install_network_daemon() {
@@ -537,6 +547,9 @@ install_aur_helper() {
 	if $install_aur ; then
 		echo "## Installing yay AUR Helper"
 
+		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -Sy --noconfirm gcc
+		export EDITOR=nano
+
 		#gpg --list-keys
 		#if [ ! -f ~/.gnupg/gpg.conf ] ; then
 		#	echo "keyserver-options auto-key-retrieve" > ~/.gnupg/gpg.conf
@@ -578,23 +591,23 @@ install_video_drivers() {
 		3)
 			echo "## installing intel"
 			pacstrap $mountpoint xf86-video-intel vulkan-intel
-			if [[ `uname -m` == x86_64 ]]; then
-				pacstrap $mountpoint lib32-intel-dri
-			fi
+			#if [[ `uname -m` == x86_64 ]]; then
+			#	pacstrap $mountpoint lib32-intel-dri
+			#fi
 		;;
     	5)
 			echo "## installing AMD"
 			pacstrap $mountpoint xf86-video-ati
-			if [[ `uname -m` == x86_64 ]]; then
-				pacstrap $mountpoint lib32-ati-dri
-			fi
+			#if [[ `uname -m` == x86_64 ]]; then
+			#	pacstrap $mountpoint lib32-ati-dri
+			#fi
 		;;
 		6)
 			echo "## installing NVIDIA open-source (nouveau)"
 			pacstrap $mountpoint xf86-video-nouveau
-			if [[ `uname -m` == x86_64 ]]; then
-				pacstrap $mountpoint lib32-nouveau-dri
-			fi
+			#if [[ `uname -m` == x86_64 ]]; then
+			#	pacstrap $mountpoint lib32-nouveau-dri
+			#fi
 		;;
 	esac
 }
