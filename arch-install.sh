@@ -554,6 +554,13 @@ install_desktop_environment() {
 		pacstrap $mountpoint libva-mesa-driver
 	fi
 
+	if [[ "${install_packages[@]}" =~ "virtualbox" ]]; then
+		# TODO : only on stable kernel
+		# else : virtualbox-host-dkms linux-lts-headers
+		pacstrap $mountpoint virtualbox virtualbox-host-modules-arch virtualbox-guest-iso
+		arch-chroot $mountpoint usermod -a -G vboxusers $username
+	fi
+
 	pacstrap $mountpoint $(eval echo ${install_packages[@]})
 
 	if [[ "${install_packages[@]}" =~ "android-tools" ]]; then
@@ -563,13 +570,6 @@ install_desktop_environment() {
 	if [[ "${install_packages[@]}" =~ "docker" ]]; then
 		arch-chroot $mountpoint usermod -a -G docker $username
 		arch-chroot $mountpoint systemctl enable docker.service
-	fi
-
-	if [[ "${install_packages[@]}" =~ "virtualbox" ]]; then
-		# TODO : only on stable kernel
-		# else : virtualbox-host-dkms linux-lts-headers
-		pacstrap $mountpoint virtualbox-host-modules-arch virtualbox-guest-iso
-		arch-chroot $mountpoint usermod -a -G vboxusers $username
 	fi
 
 	if [ $install_login == "autologin" ] ; then
