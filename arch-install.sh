@@ -113,6 +113,7 @@ set_variables() {
 			libreoffice-fresh "Free office suite" off \
 			brasero "CD/DVD mastering tool" off \
 			steam "Valves game delivery client" off \
+			steam-native-runtime "Native replacement for Steam runtime" off \
 			syncthing "Continuous network file synchronization" off \
 			keepassxc "Keepass password manager" off \
 			docker "run lightweight application containers" off \
@@ -123,8 +124,14 @@ set_variables() {
 			libmtp "library for android MTP" on \
 			heimdall "Flash firmware (ROMs) onto Samsung Phones" off \
 			firefox "Standalone web browser from mozilla.org" on \
-			geary "Lightweight email client" on \
-			vlc "Media Player" on \
+			thunderbird "mail and news reader from mozilla.org" on \
+			hexchat "graphical IRC (chat) client" off \
+			geary "Lightweight email client" off \
+			vlc "Media Player" on \			
+			rhythmbox "Music Player" off \
+			calibre "Ebook management application" off \
+			simple-scan "Simple scanning utility" off \
+			qcad "2D CAD drawing tool" off \
 			p7zip "7z archive support" on \
 			unrar "rar archive support" on \
 			zip "zip archive support" on \
