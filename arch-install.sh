@@ -22,7 +22,6 @@ enable_ssh() {
 	ipaddr=`ip addr | grep inet | grep -e enp -e wlan | awk '{print $2}' | cut -d "/" -f1`
 	echo "## set passwd for login with ssh root@$ipaddr"
 	passwd
-	exit
 }
 
 set_variables() {
@@ -92,6 +91,60 @@ set_variables() {
 		install_aur=true
 	fi
 
+	install_desktop=false
+	if whiptail --defaultno --yesno "Install Desktop Environment?" 8 40 ; then
+		# TODO : offer xfce | gnome | mate
+		install_desktop=true
+
+		install_driver=$(whiptail --nocancel --menu "Choose a video driver:" 18 60 10 \
+			xf86-video-vesa "vesa (generic)" \
+			virtualbox-guest-utils "virtualbox" \
+			xf86-video-intel "Intel" \
+			xf86-video-amdgpu "AMDGPU" \
+			xf86-video-ati "ATI (old cards)" \
+			xf86-video-nouveau "NVIDIA (nouveau opensource)" \
+		3>&1 1>&2 2>&3 )
+
+		install_packages=$(whiptail --nocancel \
+		--checklist "Choose software to be added:" 22 80 16 \
+			libreonice-fresh "" off \
+			brasero "" off \
+			steam "" off \
+			syncthing "" off \
+			keepassxc "" off \
+			docker "" off \
+			virtualbox "x86 virtualization" off \
+			android-tools "Android platform tools" on \
+			android-udev "Udev rules to connect Android devices" on \
+			gvfs-mtp "mount android MTP devices" on \
+			libmtp "library for android MTP" on \
+			heimdall "Flash firmware (ROMs) onto Samsung Phones" off \
+			firefox "Standalone web browser from mozilla.org" on \
+			geary "Lightweight email client" on \
+			vlc "Media Player" on \
+			p7zip "" on \
+			unrar "" on \
+			zip "" on \
+			gimp "" on \
+			inkscape "" on \
+			youtube-dl "" on \
+			tmux "" on \
+			rsync "" on \
+			gparted "" on \
+			ntfsprogs "" on \
+			exfat-utils "" on \
+			fuse-exfat "" on \
+			dosfstools "" on \
+			openssh "" on \
+			sshfs "" on \
+		3>&1 1>&2 2>&3 )
+
+		enable_autologin=false
+		if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
+			enable_autologin=true
+		fi
+	fi
+
 	#TODO: install desktop / video driver / checklist of software
 }
 
@@ -108,6 +161,7 @@ partition_disk() {
 	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
 	echo "## WILL COMPLETELY WIPE ${DSK}"
+	echo "## ARE YOU SURE ???"
 	read -p "Press [Enter] key to continue"
 	sgdisk --zap-all ${DSK}
 
@@ -308,10 +362,13 @@ configure_system(){
 
 	if $enable_swap ; then
 		pacstrap $mountpoint systemd-swap
-		# TODO : https://github.com/Nefelim4ag/systemd-swap/blob/master/README.md#about-configuration
+
 		sed -i -e "s/swapfc_enabled=0/swapfc_enabled=1/" $mountpoint/etc/systemd/swap.conf
 		sed -i -e "s/swapfc_force_preallocated=0/swapfc_force_preallocated=1/" $mountpoint/etc/systemd/swap.conf
 		arch_chroot "systemctl enable systemd-swap"
+
+		echo vm.swappiness=5 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
+		echo vm.vfs_cache_pressure=50 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
 	fi
 
 }
@@ -416,25 +473,21 @@ install_network_daemon() {
 }
 
 enable_ntpd() {
-	if $enable_ntpd ; then
-		echo "## enabling network time daemon"
-		pacstrap $mountpoint ntp
+	echo "## enabling network time daemon"
+	pacstrap $mountpoint ntp
 
-		if $enable_networkmanager ; then
-			pacstrap $mountpoint networkmanager-dispatcher-ntpd
-		fi
-
-		arch_chroot "ntpd -q"
-		#arch_chroot "hwclock -w"
-		arch_chroot "systemctl enable ntpd.service"
+	if $enable_networkmanager ; then
+		pacstrap $mountpoint networkmanager-dispatcher-ntpd
 	fi
+
+	arch_chroot "ntpd -q"
+	#arch_chroot "hwclock -w"
+	arch_chroot "systemctl enable ntpd.service"
 }
 
 enable_sshd() {
-	if $enable_sshd ; then
-		pacstrap $mountpoint openssh
-		arch_chroot "systemctl enable sshd.service"
-	fi
+	pacstrap $mountpoint openssh
+	arch_chroot "systemctl enable sshd.service"
 }
 
 paccache_cleanup() {
@@ -467,64 +520,20 @@ paccache_cleanup() {
 }
 
 install_aur_helper() {
-	if $install_aur ; then
-		echo "## Installing yay AUR Helper"
-		pacstrap $mountpoint base-devel git
+	echo "## Installing yay AUR Helper"
+	pacstrap $mountpoint base-devel git
 
-		sed -i 's/%wheel ALL=(ALL) ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' $mountpoint/etc/sudoers
-		arch_chroot "sudo su $USER_NAME -c \" \
-		mkdir -p /home/$USER_NAME/.cache/yay && \
-		cd /home/$USER_NAME/.cache/yay && \
-		git clone https://aur.archlinux.org/yay.git && \
-		cd yay && \
-		makepkg -si --noconfirm\""
-		sed -i 's/%wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) ALL/' $mountpoint/etc/sudoers
+	sed -i 's/%wheel ALL=(ALL) ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' $mountpoint/etc/sudoers
+	arch_chroot "sudo su $USER_NAME -c \" \
+	mkdir -p /home/$USER_NAME/.cache/yay && \
+	cd /home/$USER_NAME/.cache/yay && \
+	git clone https://aur.archlinux.org/yay.git && \
+	cd yay && \
+	makepkg -si --noconfirm\""
+	sed -i 's/%wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) ALL/' $mountpoint/etc/sudoers
 
-		echo "Defaults passwd_timeout=0" | tee $mountpoint/etc/sudoers.d/timeout
-		echo 'Defaults editor=/usr/bin/nano, !env_editor' | tee $mountpoint/etc/sudoers.d/nano
-	fi
-}
-
-install_video_drivers() {
-	#TODO : FIX THIS
-
-	case $(whiptail --menu "Choose a video driver" 20 60 12 \
-	"1" "vesa (generic)" \
-	"2" "virtualbox" \
-	"3" "Intel" \
-	"5" "AMD" \
-	"6" "NVIDIA (nouveau)" \
-	3>&1 1>&2 2>&3) in
-		1)
-			echo "## installing vesa"
-			pacstrap $mountpoint xf86-video-vesa
-		;;
-		2)
-			echo "## installing virtualbox"
-			pacstrap $mountpoint virtualbox-guest-utils
-		;;
-		3)
-			echo "## installing intel"
-			pacstrap $mountpoint xf86-video-intel vulkan-intel
-			#if [[ `uname -m` == x86_64 ]]; then
-			#	pacstrap $mountpoint lib32-intel-dri
-			#fi
-		;;
-    	5)
-			echo "## installing AMD"
-			pacstrap $mountpoint xf86-video-ati
-			#if [[ `uname -m` == x86_64 ]]; then
-			#	pacstrap $mountpoint lib32-ati-dri
-			#fi
-		;;
-		6)
-			echo "## installing NVIDIA open-source (nouveau)"
-			pacstrap $mountpoint xf86-video-nouveau
-			#if [[ `uname -m` == x86_64 ]]; then
-			#	pacstrap $mountpoint lib32-nouveau-dri
-			#fi
-		;;
-	esac
+	echo "Defaults passwd_timeout=0" | tee $mountpoint/etc/sudoers.d/timeout
+	echo 'Defaults editor=/usr/bin/nano, !env_editor' | tee $mountpoint/etc/sudoers.d/nano
 }
 
 install_desktop_environment() {
@@ -532,7 +541,33 @@ install_desktop_environment() {
 
 	pacstrap $mountpoint xorg-server xorg-xinit mate mate-extra pulseaudio network-manager-applet gnome-icon-theme
 
+
+	# TODO : 
+	# add vulkan-icd-loader vulkan-radeon | vulkan-intel
+	# ADD hardware accel to $install_driver
+	# intel intel-media-driver
+	# amdgpu libva-mesa-driver
+	# ati mesa-vdpau
+	# nouveau libva-mesa-driver
+
+	pacstrap $mountpoint mesa $install_driver
+
+	pacstrap $mountpoint $(eval echo ${install_packages[@]})
+
 	echo "exec mate-session" > $mountpoint/home/$username/.xinitrc
+
+	if $enable_autologin ; then
+		echo "## enabling autologin for user: $username"
+		mkdir -p $mountpoint/etc/systemd/system/getty@tty1.service.d
+		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" \
+			| tee $mountpoint/etc/systemd/system/getty@tty1.service.d/autologin.conf
+	fi
+
+	echo "## Installing X Autostart"
+	if ! grep -q "exec startx" ~/.bash_profile ; then 
+		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
+		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
+	fi
 
 	echo "Settings lock-screen background image to solid black"
 	cat <<-'EOF' | tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
@@ -554,19 +589,6 @@ install_desktop_environment() {
 	pacstrap $mountpoint ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
 
-	if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
-		echo "## enabling autologin for user: $username"
-		sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" \
-			| sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
-	fi
-
-	echo "## Installing X Autostart"
-	if ! grep -q "exec startx" ~/.bash_profile ; then 
-		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
-		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
-	fi
-
 	if ! grep -q "complete -cf sudo" ~/.bashrc ; then 
 		echo "complete -cf sudo" >> ~/.bashrc
 	fi
@@ -577,23 +599,19 @@ install_desktop_environment() {
 		echo "alias generate-playlist='ls -1 *.mp3 > \"\${PWD##*/}\".m3u'" >> ~/.bash_aliases
 	fi
 
-	# steam syncthing
-	sudo pacman -S firefox vlc geary openssh sshfs
-	sudo pacman -S ntfsprogs rsync p7zip unrar zip gparted
-	sudo pacman -S gimp youtube-dl tmux inkscape
-	sudo pacman -S exfat-utils fuse-exfat dosfstools
-	sudo pacman -S libreoffice-fresh brasero keepassxc
 
-	sudo pacman -S gvfs-mtp libmtp android-tools android-udev heimdall
-	sudo gpasswd -a `whoami` uucp
-	sudo gpasswd -a `whoami` adbusers
+	# TODO : if $packages includes android-tools
+	#sudo gpasswd -a `whoami` uucp
+	#sudo gpasswd -a `whoami` adbusers
 
-	sudo pacman -S docker
-	sudo gpasswd -a `whoami` docker
-	sudo systemctl start docker.service
-	sudo systemctl enable docker.service
+	# TODO : if $packages includes docker
+	#sudo gpasswd -a `whoami` docker
+	#sudo systemctl start docker.service
+	#sudo systemctl enable docker.service
 
-	# virtualbox
+	# virtualbox conf
+	# yay virtualbox-ext-oracle 
+	# add virtualbox-host-modules-arch
 }
 
 finish_setup() {
@@ -615,22 +633,34 @@ finish_setup() {
 	fi
 }
 
+function main() {
+	check_net_connectivity
+	set_variables
+	update_locale
+	update_mirrorlist
+	partition_disk
+	format_disk
+	install_base
+	configure_fstab
+	configure_system
+	install_bootloader
+	create_user
+	install_network_daemon
+	if $enable_ntpd ; then
+		enable_ntpd
+	fi
+	if $enable_sshd ; then
+		enable_sshd
+	fi
+	paccache_cleanup
+	if $install_aur ; then
+		install_aur_helper
+	fi
+	if $install_desktop ; then
+		install_desktop_environment
+	fi
+	update_mirrorlist_reflector
+	finish_setup
+}
 
-check_net_connectivity
-set_variables
-update_locale
-update_mirrorlist
-partition_disk
-format_disk
-update_mirrorlist_reflector
-install_base
-configure_fstab
-configure_system
-install_bootloader
-create_user
-install_network_daemon
-enable_ntpd
-enable_sshd
-paccache_cleanup
-install_aur_helper
-#finish_setup
+main
