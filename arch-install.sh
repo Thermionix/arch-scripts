@@ -94,6 +94,8 @@ set_variables() {
 	install_desktop=false
 	if whiptail --defaultno --yesno "Install Desktop Environment?" 8 40 ; then
 		# TODO : offer xfce | gnome | mate
+		# gnome gnome-extra
+		# xfce4 xfce4-goodies
 		install_desktop=true
 
 		install_driver=$(whiptail --nocancel --menu "Choose a video driver:" 18 60 10 \
@@ -107,12 +109,12 @@ set_variables() {
 
 		install_packages=$(whiptail --nocancel \
 		--checklist "Choose software to be added:" 22 80 16 \
-			libreonice-fresh "" off \
-			brasero "" off \
-			steam "" off \
-			syncthing "" off \
-			keepassxc "" off \
-			docker "" off \
+			libreoffice-fresh "Free office suite" off \
+			brasero "CD/DVD mastering tool" off \
+			steam "Valves game delivery client" off \
+			syncthing "Continuous network file synchronization" off \
+			keepassxc "Keepass password manager" off \
+			docker "run lightweight application containers" off \
 			virtualbox "x86 virtualization" off \
 			android-tools "Android platform tools" on \
 			android-udev "Udev rules to connect Android devices" on \
@@ -122,24 +124,27 @@ set_variables() {
 			firefox "Standalone web browser from mozilla.org" on \
 			geary "Lightweight email client" on \
 			vlc "Media Player" on \
-			p7zip "" on \
-			unrar "" on \
-			zip "" on \
-			gimp "" on \
-			inkscape "" on \
-			youtube-dl "" on \
-			tmux "" on \
-			rsync "" on \
-			gparted "" on \
-			ntfsprogs "" on \
-			exfat-utils "" on \
-			fuse-exfat "" on \
-			dosfstools "" on \
-			openssh "" on \
-			sshfs "" on \
+			p7zip "7z archive support" on \
+			unrar "rar archive support" on \
+			zip "zip archive support" on \
+			gimp "GNU Image Manipulation Program" on \
+			inkscape "vector graphics editor" on \
+			youtube-dl "youtube downloader" on \
+			tmux "terminal multiplexer" on \
+			rsync "synchronizing files between systems" on \
+			gparted "GNOME Partition Editor" on \
+			ntfsprogs "ntfs filesystem support" on \
+			exfat-utils "exfat filesystem support" on \
+			dosfstools "vfat/fat filesystem support" on \
+			openssh "remote login via SSH protocol" on \
+			sshfs "FUSE client for SSH File Transfers" on \
 		3>&1 1>&2 2>&3 )
 
 		enable_autologin=false
+		# TODO : offer 
+		# lightdm lightdm-gtk-greeter 
+		# systemctl enable lightdm.service 
+		# GNOME systemctl enable gdm.service
 		if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
 			enable_autologin=true
 		fi
@@ -392,10 +397,6 @@ install_bootloader()
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub 
 
-	#/etc/machine-id 
-	#uname -r
-	#/etc/os-release
-
 	if $enable_uefi ; then
 		pacstrap $mountpoint dosfstools efibootmgr
 		arch_chroot "grub-install --efi-directory=/boot/efi --target=x86_64-efi --bootloader-id=grub_uefi --recheck"
@@ -478,6 +479,7 @@ enable_sshd() {
 }
 
 paccache_cleanup() {
+	echo "## adding weekly timer to cleanup pacman pkg cache"
 	pacstrap $mountpoint pacman-contrib
 
 	cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.timer
