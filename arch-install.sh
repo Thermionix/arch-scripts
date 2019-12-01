@@ -403,6 +403,12 @@ configure_system(){
 		echo vm.swappiness=5 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
 		echo vm.vfs_cache_pressure=50 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
 	fi
+
+	if [[ `uname -m` == x86_64 ]]; then
+		echo "## x86_64 detected, adding multilib repository"
+		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' $mountpoint/etc/pacman.conf
+		#pacman -Syy
+	fi
 }
 
 install_bootloader()
@@ -447,7 +453,7 @@ install_bootloader()
 
 create_user() {
 	echo "## adding user: $username"
-	pacstrap $mountpoint sudo
+	pacstrap $mountpoint sudo nano
 	arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
 
 	echo "## setting password for user $username"
