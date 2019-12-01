@@ -6,7 +6,7 @@ command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script
 
 check_net_connectivity() {
 	echo "## checking net connectivity"
-	ping -c 2 resolver1.opendns.com
+	ping -c 2 archlinux.org
 
 	# TODO : offer wifimenu ?
 
@@ -537,20 +537,20 @@ install_aur_helper() {
 }
 
 install_desktop_environment() {
-	#TODO : FIX THIS
-
 	pacstrap $mountpoint xorg-server xorg-xinit mate mate-extra pulseaudio network-manager-applet gnome-icon-theme
 
-
-	# TODO : 
-	# add vulkan-icd-loader vulkan-radeon | vulkan-intel
-	# ADD hardware accel to $install_driver
-	# intel intel-media-driver
-	# amdgpu libva-mesa-driver
-	# ati mesa-vdpau
-	# nouveau libva-mesa-driver
-
 	pacstrap $mountpoint mesa $install_driver
+
+	# TODO : ls /usr/share/vulkan/icd.d/
+	if [ $install_driver == "xf86-video-intel" ] ; then
+		pacstrap $mountpoint vulkan-icd-loader vulkan-intel intel-media-driver
+	elif [ $install_driver == "xf86-video-amdgpu" ] ; then
+		pacstrap $mountpoint vulkan-icd-loader vulkan-radeon libva-mesa-driver
+	elif [ $install_driver == "xf86-video-ati" ] ; then
+		pacstrap $mountpoint mesa-vdpau
+	elif [ $install_driver == "xf86-video-nouveau" ] ; then
+		pacstrap $mountpoint libva-mesa-driver
+	fi
 
 	pacstrap $mountpoint $(eval echo ${install_packages[@]})
 
