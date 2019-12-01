@@ -2,14 +2,17 @@
 
 set -e
 command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
+# TODO : log all output
 
 check_net_connectivity() {
 	echo "## checking net connectivity"
 	ping -c 2 resolver1.opendns.com
+
 	# TODO : offer wifimenu ?
 
 	# TODO : check default gateway is set?
 	#ip route add default via <gw-ip>
+
 	echo "## ensuring the system clock is accurate"
 	timedatectl set-ntp true
 }
@@ -43,6 +46,7 @@ set_variables() {
 		fi
 	fi
 
+	# TODO : offer kernel list Stable | Hardened | Longterm | Zen
 	enable_lts=false
 	if whiptail --defaultno --yesno "Install linux-lts kernel?\n(long-term support stable/server orientated)" 8 60 ; then
 		enable_lts=true
@@ -78,6 +82,11 @@ set_variables() {
 		fi
 	fi
 
+	enable_swap=false
+	if whiptail --defaultno --yesno "enable systemd-swap script?\n(creates hybrid swap space from zram swaps,\n swap files and swap partitions)" 10 60 ; then
+		enable_swap=true
+	fi
+
 	install_aur=false
 	if whiptail --defaultno --yesno "Install AUR helper (yay)?" 8 40 ; then
 		install_aur=true
@@ -108,28 +117,16 @@ partition_disk() {
 		enable_trim=true
 	fi
 
-	enable_gpt=true
-	if ! $enable_uefi ; then
+	enable_gpt=false
+	if $enable_uefi ; then
 		# https://wiki.archlinux.org/index.php/Partitioning
-		if ! whiptail --yesno "use GPT partitioning?" 8 40 ; then
-			enable_gpt=false
+		if whiptail --yesno "use GPT partitioning?" 8 40 ; then
+			enable_gpt=true
 		fi
-	fi
-
-	enable_swap=false
-	if whiptail --defaultno --yesno "create a swap partition?" 8 40 ; then
-		enable_swap=true
 	fi
 
 	labelroot="arch-root"
 	labelboot="arch-boot"
-
-	if $enable_swap ; then
-		labelswap="arch-swap"
-		# TODO : 512 unless memsize < 512
-		swap_size=`awk '/MemTotal/ {printf( "%.0f\n", $2 / 1000 )}' /proc/meminfo`
-		swap_size=$(whiptail --nocancel --inputbox "Set swap partition size \n(recommended based on meminfo):" 10 40 "$swap_size" 3>&1 1>&2 2>&3)
-	fi
 
 	if $enable_gpt ; then
 		if $enable_uefi ; then
@@ -146,13 +143,9 @@ partition_disk() {
 	boot_size=$(whiptail --nocancel --inputbox "Set boot partition size:" 10 40 "200" 3>&1 1>&2 2>&3)
 	boot_end=$(( ${esp_end} + ${boot_size} ))
 
-	if $enable_swap ; then
-		swap_end=$(( $boot_end + ${swap_size} ))
-	fi
 
 	if $enable_gpt ; then
 		partroot="/dev/disk/by-partlabel/$labelroot"
-		partswap="/dev/disk/by-partlabel/$labelswap"
 		partboot="/dev/disk/by-partlabel/$labelboot"
 
 		parted -s ${DSK} mklabel gpt
@@ -172,19 +165,9 @@ partition_disk() {
 		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
 		parted -s ${DSK} name 2 $labelboot
 
-		if $enable_swap ; then
-			echo "## creating partition $labelswap"
-			parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
-			parted -s ${DSK} name 3 $labelswap
-
-			echo "## creating partition $labelroot"
-			parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
-			parted -s ${DSK} name 4 $labelroot
-		else
-			echo "## creating partition $labelroot"
-			parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
-			parted -s ${DSK} name 3 $labelroot
-		fi
+		echo "## creating partition $labelroot"
+		parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
+		parted -s ${DSK} name 3 $labelroot
 	else
 		parted -s ${DSK} mklabel msdos
 
@@ -192,19 +175,9 @@ partition_disk() {
 		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
 		partboot="${DSK}1"
 
-		if $enable_swap ; then
-			echo "## creating partition $labelswap"
-			parted -s ${DSK} -a optimal unit MB mkpart primary linux-swap $boot_end $swap_end
-			partswap="${DSK}2"
-
-			echo "## creating partition $labelroot"
-			parted -s ${DSK} -a optimal unit MB -- mkpart primary $swap_end -1
-			partroot="${DSK}3"
-		else
-			echo "## creating partition $labelroot"
-			parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
-			partroot="${DSK}2"
-		fi
+		echo "## creating partition $labelroot"
+		parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
+		partroot="${DSK}2"
 	fi
 
 	whiptail --title "generated partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
@@ -227,38 +200,8 @@ format_disk() {
 		enable_luks=true
 	fi
 
-	enable_bcache=false
-	#if ! $enable_luks ; then
-		# TODO : revamp bcache setup - hasn't been tested in a few years
-		#if whiptail --defaultno --yesno "setup bcache?" 8 40 ; then
-		#	enable_bcache=true
-		#fi
-	#fi
-
-	if $enable_bcache ; then
-		pacman -Sy --noconfirm git
-		# TODO : don't fail if nothing to install
-		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -S --noconfirm gcc
-		export EDITOR=nano
-		curl https://aur.archlinux.org/cgit/aur.git/snapshot/bcache-tools.tar.gz | tar -zx --directory=/tmp
-		pushd /tmp/bcache-tools
-		chown -R nobody .
-		sudo -u nobody makepkg --noconfirm
-		pacman -U bcache-tools*.pkg.tar.xz
-		popd
-		modprobe bcache
-		CACHEDSK=$(whiptail --nocancel --menu "Select the Disk to use as cache" 18 45 10 $disks 3>&1 1>&2 2>&3)
-		sgdisk --zap-all ${CACHEDSK}
-		wipefs -a ${CACHEDSK}
-		wipefs -a ${partroot}
-		make-bcache --wipe-bcache -B ${partroot} -C ${CACHEDSK}
-		sleep 4
-		partroot="/dev/bcache0"
-	fi
-
 	if $enable_luks ; then
 		maproot="croot"
-		mapswap="cswap"
 
 		echo "## encrypting $partroot"
 		cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $partroot
@@ -271,11 +214,6 @@ format_disk() {
 		echo "## mkfs $partroot"
 		mkfs.ext4 $partroot
 		mount $partroot $mountpoint
-
-		if $enable_swap ; then
-			mkswap $partswap
-			swapon $partswap
-		fi
 	fi
 
 	mkdir -p $mountpoint/boot
@@ -289,33 +227,6 @@ format_disk() {
 
 update_mirrorlist() {
 	echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
-}
-
-update_mirrorlist_reflector() {
-	pacstrap $mountpoint reflector
-
-	shopt -s lastpipe
-	reflector --list-countries | \
-	sed 's/[0-9]*//g;s/\(.*\)\([A-Z][A-Z]\)/\2\n\1/g' | \
-	readarray countries
-	selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 30 78 22 "${countries[@]}" 3>&1 1>&2 2>&3)
-
-	reflector -c $selected_country -l 5 --sort rate --save /etc/pacman.d/mirrorlist
-
-	# if selected_country == null set to United States
-
-cat <<-'EOF' | tee $mountpoint/etc/pacman.d/hooks/mirrorupgrade.hook
-[Trigger]
-Operation = Upgrade
-Type = Package
-Target = pacman-mirrorlist
-
-[Action]
-Description = Updating pacman-mirrorlist with reflector and removing pacnew...
-When = PostTransaction
-Depends = reflector
-Exec = /bin/sh -c "reflector --country 'United States' --latest 10 --age 24 --sort rate --save /etc/pacman.d/mirrorlist; rm -f /etc/pacman.d/mirrorlist.pacnew"
-EOF
 }
 
 install_base(){
@@ -355,23 +266,8 @@ configure_fstab(){
 	echo "## generating fstab entries"
 	genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
 
-	if $enable_swap ; then
-		if $enable_luks ; then
-			echo "$mapswap $partswap /dev/urandom swap,cipher=aes-xts-plain:sha256,size=256" >> $mountpoint/etc/crypttab
-			echo "/dev/mapper/$mapswap none swap defaults 0 0" >> $mountpoint/etc/fstab
-		fi
-	fi
-
 	if $enable_trim ; then
-		echo "## adding trim support"
-		sed -i -e 's/defaults/defaults,discard/' $mountpoint/etc/fstab
-
-		if $enable_luks ; then
-			sed -i -e 's/rw,/discard,rw,/' $mountpoint/etc/fstab
-			if $enable_swap ; then
-				sed -i -e 's/swap,/swap,discard,/' $mountpoint/etc/crypttab
-			fi
-		fi
+		arch_chroot "systemctl enable fstrim.timer"
 	fi
 }
 
@@ -392,15 +288,6 @@ configure_system(){
 		arch_chroot "mkinitcpio -p linux"
 	fi
 
-	if $enable_bcache ; then
-		cp /tmp/bcache-tools/*.pkg.tar.xz $mountpoint/var/cache/pacman/pkg/
-		arch_chroot "pacman -U /var/cache/pacman/pkg/bcache-tools* --noconfirm"
-		echo "## adding bcache hook"
-		sed -i -e "/^HOOKS/s/filesystems/bcache filesystems/" $mountpoint/etc/mkinitcpio.conf
-		sed -i -e '/^MODULES/s/""/"bcache"/' $mountpoint/etc/mkinitcpio.conf
-		arch_chroot "mkinitcpio -p linux"
-	fi
-
 	echo "## writing vconsole.conf"
 	echo "KEYMAP=$keyboard" > $mountpoint/etc/vconsole.conf
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
@@ -418,6 +305,42 @@ configure_system(){
 
 	echo "## disabling root login"
 	arch_chroot "passwd -l root"
+
+	if $enable_swap ; then
+		pacstrap $mountpoint systemd-swap
+		# TODO : https://github.com/Nefelim4ag/systemd-swap/blob/master/README.md#about-configuration
+		sed -i -e "s/swapfc_enabled=0/swapfc_enabled=1/" $mountpoint/etc/systemd/swap.conf
+		sed -i -e "s/swapfc_force_preallocated=0/swapfc_force_preallocated=1/" $mountpoint/etc/systemd/swap.conf
+		arch_chroot "systemctl enable systemd-swap"
+	fi
+
+}
+
+update_mirrorlist_reflector() {
+	pacstrap $mountpoint reflector
+
+	shopt -s lastpipe
+	arch-chroot $mountpoint	reflector --list-countries | \
+	sed 's/[0-9]*//g;s/\(.*\)\([A-Z][A-Z]\)/\2\n\1/g' | \
+	readarray countries
+	selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 30 78 22 "${countries[@]}" 3>&1 1>&2 2>&3)
+
+	arch-chroot $mountpoint reflector -c $selected_country -l 5 --sort rate --save /etc/pacman.d/mirrorlist
+	# TODO : if server count==0 for mirrorlist set to United States
+
+	mkdir -p $mountpoint/etc/pacman.d/hooks/
+	cat <<-EOF | tee $mountpoint/etc/pacman.d/hooks/mirrorupgrade.hook
+		[Trigger]
+		Operation = Upgrade
+		Type = Package
+		Target = pacman-mirrorlist
+
+		[Action]
+		Description = Updating pacman-mirrorlist with reflector and removing pacnew...
+		When = PostTransaction
+		Depends = reflector
+		Exec = /bin/sh -c "reflector --country '$selected_country' --latest 10 --age 24 --sort rate --save /etc/pacman.d/mirrorlist; rm -f /etc/pacman.d/mirrorlist.pacnew"
+	EOF
 }
 
 install_bootloader()
@@ -515,55 +438,47 @@ enable_sshd() {
 }
 
 paccache_cleanup() {
-pacstrap $mountpoint pacman-contrib
+	pacstrap $mountpoint pacman-contrib
 
-cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.timer
-[Unit]
-Description=Clean pacman cache weekly
+	cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.timer
+		[Unit]
+		Description=Clean pacman cache weekly
 
-[Timer]
-OnBootSec=10min
-OnCalendar=weekly
-Persistent=true     
- 
-[Install]
-WantedBy=timers.target
-EOF
+		[Timer]
+		OnBootSec=10min
+		OnCalendar=weekly
+		Persistent=true     
+		 
+		[Install]
+		WantedBy=timers.target
+	EOF
 
-cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.service
-[Unit]
-Description=Clean pacman cache
+	cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.service
+		[Unit]
+		Description=Clean pacman cache
 
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/paccache -rk2
-ExecStart=/usr/bin/paccache -ruk0
-EOF
+		[Service]
+		Type=oneshot
+		ExecStart=/usr/bin/paccache -rk2
+		ExecStart=/usr/bin/paccache -ruk0
+	EOF
 
-arch_chroot "systemctl enable paccache-clean.timer"
+	arch_chroot "systemctl enable paccache-clean.timer"
 }
 
 install_aur_helper() {
 	if $install_aur ; then
 		echo "## Installing yay AUR Helper"
+		pacstrap $mountpoint base-devel git
 
-		fgrep -vf <(pacman -Qq) <(pacman -Sgq base-devel) | xargs pacman -Sy --noconfirm gcc
-		export EDITOR=nano
-
-		#gpg --list-keys
-		#if [ ! -f ~/.gnupg/gpg.conf ] ; then
-		#	echo "keyserver-options auto-key-retrieve" > ~/.gnupg/gpg.conf
-		#else
-		#	sed -i -e "/^#keyserver-options auto-key-retrieve/s/#//" ~/.gnupg/gpg.conf
-		#fi
-
-		curl https://aur.archlinux.org/cgit/aur.git/snapshot/yay.tar.gz | tar -zx --directory=/tmp
-		pushd /tmp/yay
-		chown -R nobody .
-		sudo -u nobody makepkg --noconfirm
-		popd
-		cp /tmp/yay/*.pkg.tar.xz $mountpoint/var/cache/pacman/pkg/
-		arch_chroot "pacman -U /var/cache/pacman/pkg/yay* --noconfirm"
+		sed -i 's/%wheel ALL=(ALL) ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' $mountpoint/etc/sudoers
+		arch_chroot "sudo su $USER_NAME -c \" \
+		mkdir -p /home/$USER_NAME/.cache/yay && \
+		cd /home/$USER_NAME/.cache/yay && \
+		git clone https://aur.archlinux.org/yay.git && \
+		cd yay && \
+		makepkg -si --noconfirm\""
+		sed -i 's/%wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) ALL/' $mountpoint/etc/sudoers
 
 		echo "Defaults passwd_timeout=0" | tee $mountpoint/etc/sudoers.d/timeout
 		echo 'Defaults editor=/usr/bin/nano, !env_editor' | tee $mountpoint/etc/sudoers.d/nano
@@ -620,13 +535,13 @@ install_desktop_environment() {
 	echo "exec mate-session" > $mountpoint/home/$username/.xinitrc
 
 	echo "Settings lock-screen background image to solid black"
-cat <<-'EOF' | tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
-[org.mate.background]
-color-shading-type='solid'
-picture-options='scaled'
-picture-filename=''
-primary-color='#000000'
-EOF
+	cat <<-'EOF' | tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
+		[org.mate.background]
+		color-shading-type='solid'
+		picture-options='scaled'
+		picture-filename=''
+		primary-color='#000000'
+	EOF
 	glib-compile-schemas /usr/share/glib-2.0/schemas/
 
 	echo "fixing mate-menu icon for gnome icon theme"
