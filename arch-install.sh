@@ -303,19 +303,6 @@ install_base(){
 	fi
 }
 
-install_multilib_repo() {
-	# TODO : FIX THIS
-	if [[ `uname -m` == x86_64 ]]; then
-		echo "## x86_64 detected, adding multilib repository"
-		if ! grep -q "\[multilib\]" /etc/pacman.conf ; then
-			echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
-		else
-			sudo sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
-		fi
-		sudo pacman -Syy
-	fi
-}
-
 configure_fstab(){
 	echo "## generating fstab entries"
 	genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
@@ -524,9 +511,9 @@ install_aur_helper() {
 	pacstrap $mountpoint base-devel git
 
 	sed -i 's/%wheel ALL=(ALL) ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' $mountpoint/etc/sudoers
-	arch_chroot "sudo su $USER_NAME -c \" \
-	mkdir -p /home/$USER_NAME/.cache/yay && \
-	cd /home/$USER_NAME/.cache/yay && \
+	arch_chroot "sudo su $username -c \" \
+	mkdir -p /home/$username/.cache/yay && \
+	cd /home/$username/.cache/yay && \
 	git clone https://aur.archlinux.org/yay.git && \
 	cd yay && \
 	makepkg -si --noconfirm\""
@@ -541,7 +528,6 @@ install_desktop_environment() {
 
 	pacstrap $mountpoint mesa $install_driver
 
-	# TODO : ls /usr/share/vulkan/icd.d/
 	if [ $install_driver == "xf86-video-intel" ] ; then
 		pacstrap $mountpoint vulkan-icd-loader vulkan-intel intel-media-driver
 	elif [ $install_driver == "xf86-video-amdgpu" ] ; then
@@ -554,8 +540,6 @@ install_desktop_environment() {
 
 	pacstrap $mountpoint $(eval echo ${install_packages[@]})
 
-	echo "exec mate-session" > $mountpoint/home/$username/.xinitrc
-
 	if $enable_autologin ; then
 		echo "## enabling autologin for user: $username"
 		mkdir -p $mountpoint/etc/systemd/system/getty@tty1.service.d
@@ -563,55 +547,13 @@ install_desktop_environment() {
 			| tee $mountpoint/etc/systemd/system/getty@tty1.service.d/autologin.conf
 	fi
 
-	echo "## Installing X Autostart"
-	if ! grep -q "exec startx" ~/.bash_profile ; then 
-		test -f /home/$username/.bash_profile || cp /etc/skel/.bash_profile ~/.bash_profile
-		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> ~/.bash_profile
-	fi
-
-	echo "Settings lock-screen background image to solid black"
-	cat <<-'EOF' | tee /usr/share/glib-2.0/schemas/mate-background.gschema.override
-		[org.mate.background]
-		color-shading-type='solid'
-		picture-options='scaled'
-		picture-filename=''
-		primary-color='#000000'
-	EOF
-	glib-compile-schemas /usr/share/glib-2.0/schemas/
-
-	echo "fixing mate-menu icon for gnome icon theme"
-	sudo wget -O /usr/share/pixmaps/arch-menu.png http://i.imgur.com/vBpJDs7.png
-	gsettings set org.mate.panel.menubar icon-name arch-menu
-
-	#yay -S --noconfirm adwaita-x-dark-and-light-theme
+	echo "## Enabling Xorg Autostart"
+	echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> $mountpoint/home/$username/.bash_profile
+	echo "exec mate-session" > $mountpoint/home/$username/.xinitrc
+	arch_chroot "chown -R $username:users /home/$username"
 
 	echo "## Installing Fonts"
 	pacstrap $mountpoint ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
-	if ! test -f /etc/fonts/conf.d/70-no-bitmaps.conf ; then sudo ln -s /etc/fonts/conf.avail/70-no-bitmaps.conf /etc/fonts/conf.d/ ; fi
-
-	if ! grep -q "complete -cf sudo" ~/.bashrc ; then 
-		echo "complete -cf sudo" >> ~/.bashrc
-	fi
-	if ! grep -q "bash_aliases" ~/.bashrc ; then 
-		echo -e "if [ -f ~/.bash_aliases ]; then\n. ~/.bash_aliases\nfi" >> ~/.bashrc
-	fi
-	if ! grep -q "yolo" ~/.bash_aliases ; then 
-		echo "alias generate-playlist='ls -1 *.mp3 > \"\${PWD##*/}\".m3u'" >> ~/.bash_aliases
-	fi
-
-
-	# TODO : if $packages includes android-tools
-	#sudo gpasswd -a `whoami` uucp
-	#sudo gpasswd -a `whoami` adbusers
-
-	# TODO : if $packages includes docker
-	#sudo gpasswd -a `whoami` docker
-	#sudo systemctl start docker.service
-	#sudo systemctl enable docker.service
-
-	# virtualbox conf
-	# yay virtualbox-ext-oracle 
-	# add virtualbox-host-modules-arch
 }
 
 finish_setup() {
