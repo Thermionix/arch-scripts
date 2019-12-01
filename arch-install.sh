@@ -281,7 +281,44 @@ format_disk() {
 }
 
 update_mirrorlist() {
-	echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
+	mirrorlist_url="https://www.archlinux.org/mirrorlist/?country=all&protocol=http&protocol=https&ip_version=4"
+
+	mirrorlist_tmp=$(mktemp --suffix=-mirrorlist)
+	curl -so ${mirrorlist_tmp} ${mirrorlist_url}
+
+	if [[ -s ${mirrorlist_tmp} ]]; then
+		shopt -s lastpipe
+		tail -n +7  ${mirrorlist_tmp} | grep -oP "^## \K[a-zA-Z ]+" | sed 's/$/\n/g' | readarray countries
+		selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 30 78 22 "${countries[@]}" 3>&1 1>&2 2>&3)
+		sed -i -n "/## $selected_country/,/^\$/p" ${mirrorlist_tmp}
+		sed -i 's/^#Server/Server/g' ${mirrorlist_tmp}
+
+		mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
+		mv ${mirrorlist_tmp} /etc/pacman.d/mirrorlist
+	else
+		echo "## could not download mirrorlist"
+		echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
+	fi
+}
+
+update_mirrorlist_reflector() {
+	pacstrap $mountpoint reflector
+
+	arch-chroot $mountpoint reflector -c $selected_country -l 5 --sort rate --save /etc/pacman.d/mirrorlist
+
+	mkdir -p $mountpoint/etc/pacman.d/hooks/
+	cat <<-EOF | tee $mountpoint/etc/pacman.d/hooks/mirrorupgrade.hook
+		[Trigger]
+		Operation = Upgrade
+		Type = Package
+		Target = pacman-mirrorlist
+
+		[Action]
+		Description = Updating pacman-mirrorlist with reflector and removing pacnew...
+		When = PostTransaction
+		Depends = reflector
+		Exec = /bin/sh -c "reflector --country '$selected_country' --latest 10 --age 24 --sort rate --save /etc/pacman.d/mirrorlist; rm -f /etc/pacman.d/mirrorlist.pacnew"
+	EOF
 }
 
 install_base(){
@@ -359,33 +396,6 @@ configure_system(){
 		echo vm.vfs_cache_pressure=50 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
 	fi
 
-}
-
-update_mirrorlist_reflector() {
-	pacstrap $mountpoint reflector
-
-	shopt -s lastpipe
-	arch-chroot $mountpoint	reflector --list-countries | \
-	sed 's/[0-9]*//g;s/\(.*\)\([A-Z][A-Z]\)/\2\n\1/g' | \
-	readarray countries
-	selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 30 78 22 "${countries[@]}" 3>&1 1>&2 2>&3)
-
-	arch-chroot $mountpoint reflector -c $selected_country -l 5 --sort rate --save /etc/pacman.d/mirrorlist
-	# TODO : if server count==0 for mirrorlist set to United States
-
-	mkdir -p $mountpoint/etc/pacman.d/hooks/
-	cat <<-EOF | tee $mountpoint/etc/pacman.d/hooks/mirrorupgrade.hook
-		[Trigger]
-		Operation = Upgrade
-		Type = Package
-		Target = pacman-mirrorlist
-
-		[Action]
-		Description = Updating pacman-mirrorlist with reflector and removing pacnew...
-		When = PostTransaction
-		Depends = reflector
-		Exec = /bin/sh -c "reflector --country '$selected_country' --latest 10 --age 24 --sort rate --save /etc/pacman.d/mirrorlist; rm -f /etc/pacman.d/mirrorlist.pacnew"
-	EOF
 }
 
 install_bootloader()
