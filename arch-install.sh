@@ -295,6 +295,7 @@ update_mirrorlist() {
 
 		mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.orig &&
 		mv ${mirrorlist_tmp} /etc/pacman.d/mirrorlist
+		chmod +r /etc/pacman.d/mirrorlist
 	else
 		echo "## could not download mirrorlist"
 		echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
@@ -395,7 +396,6 @@ configure_system(){
 		echo vm.swappiness=5 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
 		echo vm.vfs_cache_pressure=50 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
 	fi
-
 }
 
 install_bootloader()
