@@ -622,6 +622,7 @@ update_locale
 update_mirrorlist
 partition_disk
 format_disk
+update_mirrorlist_reflector
 install_base
 configure_fstab
 configure_system
