@@ -87,7 +87,7 @@ set_variables() {
 	fi
 
 	install_aur=false
-	if whiptail --defaultno --yesno "Install AUR helper (yay)?" 8 40 ; then
+	if whiptail --defaultno --yesno "Install AUR helper (yay) to access the\narch user community-driven repository\n(which includes non-FOSS software)" 10 60 ; then
 		install_aur=true
 	fi
 
