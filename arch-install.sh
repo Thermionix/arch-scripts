@@ -93,10 +93,11 @@ set_variables() {
 
 	install_desktop=false
 	if whiptail --defaultno --yesno "Install Desktop Environment?" 8 40 ; then
-		# TODO : offer xfce | gnome | mate
-		# gnome gnome-extra
-		# xfce4 xfce4-goodies
-		install_desktop=true
+		install_desktop=$(whiptail --nocancel --menu "Choose a desktop environment:" 18 70 10 \
+			mate "MATE Desktop Environment is the continuation of GNOME 2" \
+			xfce "Xfce is a lightweight desktop environment" \
+			gnome "GNOME Project open-source desktop environment" \
+		3>&1 1>&2 2>&3 )
 
 		install_driver=$(whiptail --nocancel --menu "Choose a video driver:" 18 60 10 \
 			xf86-video-vesa "vesa (generic)" \
@@ -140,17 +141,13 @@ set_variables() {
 			sshfs "FUSE client for SSH File Transfers" on \
 		3>&1 1>&2 2>&3 )
 
-		enable_autologin=false
-		# TODO : offer 
-		# lightdm lightdm-gtk-greeter 
-		# systemctl enable lightdm.service 
-		# GNOME systemctl enable gdm.service
-		if whiptail --yesno "enable autologin for user: $username?" 8 40 ; then
-			enable_autologin=true
-		fi
+		install_login=$(whiptail --nocancel --menu "Choose a login method:" 18 70 10 \
+			autologin "passwordless auto-login straight to desktop" \
+			lightdm "Lightweight display manager" \
+			gdm "GNOME Display Manager" \
+			none "Select for Headless/Server" \
+		3>&1 1>&2 2>&3 )
 	fi
-
-	#TODO: install desktop / video driver / checklist of software
 }
 
 update_locale() {
@@ -178,8 +175,7 @@ partition_disk() {
 
 	enable_gpt=false
 	if $enable_uefi ; then
-		# https://wiki.archlinux.org/index.php/Partitioning
-		if whiptail --yesno "use GPT partitioning?" 8 40 ; then
+		if whiptail --yesno "use GPT partitioning?\n(It is recommended to always use GPT for UEFI boot)" 8 60 ; then
 			enable_gpt=true
 		fi
 	fi
@@ -440,7 +436,7 @@ create_user() {
 	echo "## setting password for user $username"
 	arch_chroot "printf \"$userpass\n$userpass\" | passwd $username"
 
-	echo "## allowing wheel group as sudoers"
+	echo "## allowing members of wheel group as sudoers"
 	sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 
 	echo "export EDITOR=\"nano\"" >> $mountpoint/home/$username/.bashrc
@@ -526,7 +522,15 @@ install_aur_helper() {
 }
 
 install_desktop_environment() {
-	pacstrap $mountpoint xorg-server xorg-xinit mate mate-extra pulseaudio network-manager-applet gnome-icon-theme
+	pacstrap $mountpoint xorg-server xorg-xinit pulseaudio 
+
+	if [ $install_desktop == "mate" ] ; then
+		pacstrap $mountpoint mate mate-extra network-manager-applet gnome-icon-theme
+	elif [ $install_desktop == "gnome" ] ; then
+		pacstrap $mountpoint gnome gnome-extra
+	elif [ $install_desktop == "xfce" ] ; then
+		pacstrap $mountpoint xfce4 xfce4-goodies
+	fi
 
 	pacstrap $mountpoint mesa $install_driver
 
@@ -542,17 +546,45 @@ install_desktop_environment() {
 
 	pacstrap $mountpoint $(eval echo ${install_packages[@]})
 
-	if $enable_autologin ; then
+	if [[ "${install_packages[@]}" =~ "android-tools" ]]; then
+		arch-chroot $mountpoint usermod -a -G uucp,adbusers $username
+	fi
+
+	if [[ "${install_packages[@]}" =~ "docker" ]]; then
+		arch-chroot $mountpoint usermod -a -G docker $username
+		arch-chroot $mountpoint systemctl enable docker.service
+	fi
+
+	if [[ "${install_packages[@]}" =~ "virtualbox" ]]; then
+		# TODO : only on stable kernel
+		# else : virtualbox-host-dkms linux-lts-headers
+		pacstrap $mountpoint virtualbox-host-modules-arch virtualbox-guest-iso
+		arch-chroot $mountpoint usermod -a -G vboxusers $username
+	fi
+
+	if [ $install_login == "autologin" ] ; then
 		echo "## enabling autologin for user: $username"
 		mkdir -p $mountpoint/etc/systemd/system/getty@tty1.service.d
 		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" \
 			| tee $mountpoint/etc/systemd/system/getty@tty1.service.d/autologin.conf
+		echo "## Enabling Xorg Autostart"
+		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> $mountpoint/home/$username/.bash_profile
+		
+		if [ $install_desktop == "mate" ] ; then
+			echo "exec mate-session" > $mountpoint/home/$username/.xinitrc
+		elif [ $install_desktop == "gnome" ] ; then
+			echo -e "export XDG_SESSION_TYPE=x11\nexport GDK_BACKEND=x11\nexec gnome-session" > $mountpoint/home/$username/.xinitrc
+		elif [ $install_desktop == "xfce" ] ; then
+			echo "exec startxfce4" > $mountpoint/home/$username/.xinitrc
+		fi		
+		arch_chroot "chown -R $username:users /home/$username"
+	elif [ $install_login == "lightdm" ] ; then
+		pacstrap $mountpoint lightdm lightdm-gtk-greeter
+		arch_chroot "systemctl enable lightdm.service"
+	elif [ $install_login == "gdm" ] ; then
+		pacstrap $mountpoint gdm
+		arch_chroot "systemctl enable gdm.service"
 	fi
-
-	echo "## Enabling Xorg Autostart"
-	echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> $mountpoint/home/$username/.bash_profile
-	echo "exec mate-session" > $mountpoint/home/$username/.xinitrc
-	arch_chroot "chown -R $username:users /home/$username"
 
 	echo "## Installing Fonts"
 	pacstrap $mountpoint ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
@@ -600,7 +632,7 @@ function main() {
 	if $install_aur ; then
 		install_aur_helper
 	fi
-	if $install_desktop ; then
+	if [ $install_desktop != false ] ; then
 		install_desktop_environment
 	fi
 	update_mirrorlist_reflector
