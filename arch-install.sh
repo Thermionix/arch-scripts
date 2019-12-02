@@ -27,7 +27,7 @@ enable_ssh() {
 set_variables() {
 	echo "## defining variables for installation"
 
-	selected_keymap=us
+	selected_keymap="us"
 	if whiptail --defaultno --yes-button "Change Keymap" \
 		--no-button "Accept" \
 		--yesno "The default console keymap is 'US'" 7 55 ; then
@@ -36,12 +36,18 @@ set_variables() {
 		echo $selected_keymap
 	fi
 
-	# TODO : offer UTF locale list selection
-	# cat /etc/locale.gen | grep "UTF-8" | grep -oP "^#\K[a-zA-Z0-9@._-]+"
-	locale=$(whiptail --nocancel --inputbox "Select locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
+	selected_locale="en_US.UTF-8"
+	if whiptail --defaultno --yes-button "Change Locale" \
+		--no-button "Accept" \
+		--yesno "The default locale is 'en_US.UTF-8'" 7 55 ; then
+		# TODO : cat /etc/locale.gen | grep "UTF-8" | grep -oP "^#\K[a-zA-Z0-9@._-]+"
+		selected_locale=$(whiptail --nocancel --inputbox "Select locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
+		echo $selected_locale
+	fi
 
 	selected_timezone=$(tzselect)
 
+	#TODO : user machine id as default hostname
 	#new_uuid=$(cat /sys/devices/virtual/dmi/id/product_serial)
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-box" 3>&1 1>&2 2>&3)
 
@@ -171,8 +177,8 @@ set_variables() {
 update_locale() {
 	echo "## updating locale"
 	loadkeys $selected_keymap
-	export LANG=$locale
-	sed -i -e "s/#$locale/$locale/" /etc/locale.gen
+	export LANG=$selected_locale
+	sed -i -e "s/#$selected_locale/$selected_locale/" /etc/locale.gen
 	locale-gen
 }
 
@@ -375,10 +381,10 @@ arch_chroot(){
 
 configure_system(){
 	echo "## updating locale"
-	sed -i -e "s/#$locale/$locale/" $mountpoint/etc/locale.gen
+	sed -i -e "s/#$selected_locale/$selected_locale/" $mountpoint/etc/locale.gen
 	arch_chroot "locale-gen"
-	echo LANG=$locale > $mountpoint/etc/locale.conf
-	arch_chroot "export LANG=$locale"
+	echo LANG=$selected_locale > $mountpoint/etc/locale.conf
+	arch_chroot "export LANG=$selected_locale"
 
 	if $enable_luks ; then
 		echo "## adding encrypt hook"
