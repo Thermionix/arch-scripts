@@ -27,8 +27,14 @@ enable_ssh() {
 set_variables() {
 	echo "## defining variables for installation"
 
-	# TODO : localectl list-keymaps | localectl set-keymap $selected_keymap
-	keyboard=$(whiptail --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
+	selected_keymap=us
+	if whiptail --defaultno --yes-button "Change Keymap" \
+		--no-button "Accept" \
+		--yesno "The default console keymap is 'US'" 7 55 ; then
+		localectl list-keymaps
+		# TODO : localectl list-keymaps | localectl set-keymap $selected_keymap
+		echo $selected_keymap
+	fi
 
 	# TODO : offer UTF locale list selection
 	# cat /etc/locale.gen | grep "UTF-8" | grep -oP "^#\K[a-zA-Z0-9@._-]+"
@@ -164,7 +170,7 @@ set_variables() {
 
 update_locale() {
 	echo "## updating locale"
-	loadkeys $keyboard
+	loadkeys $selected_keymap
 	export LANG=$locale
 	sed -i -e "s/#$locale/$locale/" /etc/locale.gen
 	locale-gen
@@ -381,7 +387,7 @@ configure_system(){
 	fi
 
 	echo "## writing vconsole.conf"
-	echo "KEYMAP=$keyboard" > $mountpoint/etc/vconsole.conf
+	echo "KEYMAP=$selected_keymap" > $mountpoint/etc/vconsole.conf
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
 
 	echo "## updating localtime"
@@ -424,6 +430,8 @@ configure_system(){
 
 install_bootloader()
 {
+	# TODO : offer systemd-boot
+
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub 
 
