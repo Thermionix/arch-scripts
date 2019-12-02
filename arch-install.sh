@@ -84,6 +84,8 @@ set_variables() {
 	enable_swap=false
 	if whiptail --defaultno --yesno "enable systemd-swap script?\n(creates hybrid swap space from zram swaps,\n swap files and swap partitions)" 10 60 ; then
 		enable_swap=true
+		# TODO : warn hibernation not available with systemd-swap
+		# TODO : offer zswap + swapfc or only ZRam (for SSD wear)
 	fi
 
 	install_aur=false
@@ -398,8 +400,14 @@ configure_system(){
 	if $enable_swap ; then
 		pacstrap $mountpoint systemd-swap
 
-		sed -i -e "s/swapfc_enabled=0/swapfc_enabled=1/" $mountpoint/etc/systemd/swap.conf
-		sed -i -e "s/swapfc_force_preallocated=0/swapfc_force_preallocated=1/" $mountpoint/etc/systemd/swap.conf
+		mkdir -p $mountpoint/etc/systemd/swap.conf.d/
+		echo -e "swapfc_enabled=1\n" \
+			| tee $mountpoint/etc/systemd/swap.conf.d/override.conf
+
+		#zswap_enabled=0
+		#zram_enabled=1
+		#swapfc_enabled=0
+
 		arch_chroot "systemctl enable systemd-swap"
 
 		echo vm.swappiness=5 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
