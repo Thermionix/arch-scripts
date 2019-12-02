@@ -146,6 +146,8 @@ set_variables() {
 			dosfstools "vfat/fat filesystem support" on \
 			openssh "remote login via SSH protocol" on \
 			sshfs "FUSE client for SSH File Transfers" on \
+			wget "Network utility to retrieve files" on \
+			networkmanager-openvpn "NetworkManager VPN plugin for OpenVPN" on \
 		3>&1 1>&2 2>&3 )
 
 		install_login=$(whiptail --nocancel --menu "Choose a login method:" 18 70 10 \
