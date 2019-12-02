@@ -27,11 +27,12 @@ enable_ssh() {
 set_variables() {
 	echo "## defining variables for installation"
 
+	# TODO : localectl list-keymaps | localectl set-keymap $selected_keymap
+	keyboard=$(whiptail --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
+
 	# TODO : offer UTF locale list selection
 	# cat /etc/locale.gen | grep "UTF-8" | grep -oP "^#\K[a-zA-Z0-9@._-]+"
 	locale=$(whiptail --nocancel --inputbox "Select locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
-
-	keyboard=$(whiptail --nocancel --inputbox "Set keyboard:" 10 40 "us" 3>&1 1>&2 2>&3)
 
 	selected_timezone=$(tzselect)
 
@@ -129,7 +130,7 @@ set_variables() {
 			thunderbird "mail and news reader from mozilla.org" on \
 			hexchat "graphical IRC (chat) client" off \
 			geary "Lightweight email client" off \
-			vlc "Media Player" on \			
+			vlc "Media Player" on \
 			rhythmbox "Music Player" off \
 			calibre "Ebook management application" off \
 			simple-scan "Simple scanning utility" off \
