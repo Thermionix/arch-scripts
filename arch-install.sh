@@ -31,10 +31,10 @@ set_variables() {
 	if whiptail --defaultno --yes-button "Change Keymap" \
 		--no-button "Accept" \
 		--yesno "The default console keymap is 'US'" 7 55 ; then
-		localectl list-keymaps
 		# TODO : localectl list-keymaps | localectl set-keymap $selected_keymap
 		echo $selected_keymap
 	fi
+	loadkeys $selected_keymap
 
 	selected_locale="en_US.UTF-8"
 	if whiptail --defaultno --yes-button "Change Locale" \
@@ -44,6 +44,9 @@ set_variables() {
 		selected_locale=$(whiptail --nocancel --inputbox "Select locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
 		echo $selected_locale
 	fi
+	export LANG=$selected_locale
+	sed -i -e "s/#$selected_locale/$selected_locale/" /etc/locale.gen
+	locale-gen
 
 	selected_timezone=$(tzselect)
 
@@ -172,14 +175,6 @@ set_variables() {
 			none "Select for Headless/Server" \
 		3>&1 1>&2 2>&3 )
 	fi
-}
-
-update_locale() {
-	echo "## updating locale"
-	loadkeys $selected_keymap
-	export LANG=$selected_locale
-	sed -i -e "s/#$selected_locale/$selected_locale/" /etc/locale.gen
-	locale-gen
 }
 
 partition_disk() {
@@ -660,7 +655,6 @@ finish_setup() {
 function main() {
 	check_net_connectivity
 	set_variables
-	update_locale
 	update_mirrorlist
 	partition_disk
 	format_disk
