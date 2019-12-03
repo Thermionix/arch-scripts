@@ -65,10 +65,12 @@ set_variables() {
 		fi
 	fi
 
+	# TODO : confirm not blank
 	username=$(whiptail --nocancel --inputbox "Set username for sudo user to be created for this install" 10 40 3>&1 1>&2 2>&3)
 	# TODO : confirm and compare password twice
 	userpass=$(whiptail --nocancel --passwordbox "Set password for $username" 10 40 3>&1 1>&2 2>&3)
 
+	# TODO : offer more?
 	setup_network=false
 	case $(whiptail --nocancel --menu "Choose a network daemon" 20 60 12 \
 	"NetworkManager" "(Desktop Orientated)" \
@@ -141,11 +143,6 @@ set_variables() {
 			keepassxc "Keepass password manager" off \
 			docker "run lightweight application containers" off \
 			virtualbox "x86 virtualization" off \
-			android-tools "Android platform tools" on \
-			android-udev "Udev rules to connect Android devices" on \
-			gvfs-mtp "mount android MTP devices" on \
-			libmtp "library for android MTP" on \
-			heimdall "Flash firmware (ROMs) onto Samsung Phones" off \
 			firefox "Standalone web browser from mozilla.org" on \
 			thunderbird "mail and news reader from mozilla.org" on \
 			hexchat "graphical IRC (chat) client" off \
@@ -153,14 +150,20 @@ set_variables() {
 			vlc "Media Player" on \
 			rhythmbox "Music Player" off \
 			calibre "Ebook management application" off \
+			gimp "GNU Image Manipulation Program" on \
+			inkscape "vector graphics editor" on \
+			networkmanager-openvpn "NetworkManager VPN plugin for OpenVPN" on \
+			youtube-dl "youtube cli downloader" on \
+			android-tools "Android platform tools" on \
+			android-udev "Udev rules to connect Android devices" on \
+			gvfs-mtp "mount android MTP devices" on \
+			libmtp "library for android MTP" on \
+			heimdall "Flash firmware (ROMs) onto Samsung Phones" off \
 			simple-scan "Simple scanning utility" off \
 			qcad "2D CAD drawing tool" off \
 			p7zip "7z archive support" on \
 			unrar "rar archive support" on \
 			zip "zip archive support" on \
-			gimp "GNU Image Manipulation Program" on \
-			inkscape "vector graphics editor" on \
-			youtube-dl "youtube downloader" on \
 			tmux "terminal multiplexer" on \
 			rsync "synchronizing files between systems" on \
 			gparted "GNOME Partition Editor" on \
@@ -170,7 +173,6 @@ set_variables() {
 			openssh "remote login via SSH protocol" on \
 			sshfs "FUSE client for SSH File Transfers" on \
 			wget "Network utility to retrieve files" on \
-			networkmanager-openvpn "NetworkManager VPN plugin for OpenVPN" on \
 		3>&1 1>&2 2>&3 )
 
 		install_login=$(whiptail --nocancel --menu "Choose a login method:" 18 70 10 \
@@ -313,7 +315,7 @@ update_mirrorlist() {
 	if [[ -s ${mirrorlist_tmp} ]]; then
 		shopt -s lastpipe
 		tail -n +7  ${mirrorlist_tmp} | grep -oP "^## \K[a-zA-Z ]+" | sed 's/$/\n/g' | readarray countries
-		selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 30 78 22 "${countries[@]}" 3>&1 1>&2 2>&3)
+		selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 22 60 14 "${countries[@]}" 3>&1 1>&2 2>&3)
 		sed -i -n "/## $selected_country/,/^\$/p" ${mirrorlist_tmp}
 		sed -i 's/^#Server/Server/g' ${mirrorlist_tmp}
 
