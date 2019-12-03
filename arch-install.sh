@@ -51,7 +51,7 @@ set_variables() {
 	selected_timezone=$(tzselect)
 
 	#TODO : user machine id as default hostname
-	#new_uuid=$(cat /sys/devices/virtual/dmi/id/product_serial)
+	#new_uuid=$(cat /sys/devices/virtual/dmi/id/product_serial) # or board_name
 	hostname=$(whiptail --nocancel --inputbox "Set hostname:" 10 40 "arch-box" 3>&1 1>&2 2>&3)
 
 	enable_uefi=false
@@ -321,7 +321,7 @@ update_mirrorlist() {
 	fi
 }
 
-update_mirrorlist_reflector() {
+install_mirrorlist_reflector_hook() {
 	pacstrap $mountpoint reflector
 
 	arch-chroot $mountpoint reflector -c $selected_country -l 5 --sort rate --save /etc/pacman.d/mirrorlist
@@ -677,7 +677,7 @@ function main() {
 	if [ $install_desktop != false ] ; then
 		install_desktop_environment
 	fi
-	update_mirrorlist_reflector
+	install_mirrorlist_reflector_hook
 	finish_setup
 }
 
