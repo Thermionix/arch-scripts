@@ -31,8 +31,10 @@ set_variables() {
 	if whiptail --defaultno --yes-button "Change Keymap" \
 		--no-button "Accept" \
 		--yesno "The default console keymap is 'US'" 7 55 ; then
-		# TODO : localectl list-keymaps | localectl set-keymap $selected_keymap
-		echo $selected_keymap
+			shopt -s lastpipe
+			localectl list-keymaps | sed 's/$/\n/g' | readarray -t keymap_array
+			selected_keymap=$(whiptail --noitem --default-item 'us' --nocancel \
+				--menu "select a keymap:" 30 50 22 "${keymap_array[@]}" 3>&1 1>&2 2>&3)
 	fi
 	loadkeys $selected_keymap
 
@@ -40,9 +42,10 @@ set_variables() {
 	if whiptail --defaultno --yes-button "Change Locale" \
 		--no-button "Accept" \
 		--yesno "The default locale is 'en_US.UTF-8'" 7 55 ; then
-		# TODO : cat /etc/locale.gen | grep "UTF-8" | grep -oP "^#\K[a-zA-Z0-9@._-]+"
-		selected_locale=$(whiptail --nocancel --inputbox "Select locale:" 10 40 "en_AU.UTF-8" 3>&1 1>&2 2>&3)
-		echo $selected_locale
+			shopt -s lastpipe
+			cat /etc/locale.gen | grep "UTF-8" | grep -oP "^[#]?\K[a-zA-Z0-9@._-]+" | sed 's/$/\n/g' | readarray -t locale_array
+			selected_locale=$(whiptail --noitem --default-item 'en_AU.UTF-8' --nocancel \
+				--menu "select a UTF-8 locale:" 30 50 22 "${locale_array[@]}" 3>&1 1>&2 2>&3)
 	fi
 	export LANG=$selected_locale
 	sed -i -e "s/#$selected_locale/$selected_locale/" /etc/locale.gen
@@ -100,7 +103,7 @@ set_variables() {
 	enable_swap=false
 	if whiptail --defaultno --yesno "enable systemd-swap script?\n(creates hybrid swap space from zram swaps,\n swap files and swap partitions)" 10 60 ; then
 		enable_swap=true
-		# TODO : warn hibernation not available with systemd-swap
+		# TODO : warn hibernation is not available with systemd-swap
 		# TODO : offer zswap + swapfc or only ZRam (for SSD wear)
 	fi
 
