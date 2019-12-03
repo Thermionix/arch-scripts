@@ -328,10 +328,9 @@ update_mirrorlist() {
 	fi
 
 	multilib_enabled=false
-	if [[ `uname -m` == x86_64 ]]; then
+	if [[ `uname -m` == x86_64 ]] && [ $install_desktop != false ] ; then
 		echo "## x86_64 detected, enabling multilib repository"
 		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
-		pacman -Syy
 		multilib_enabled=true
 	fi
 }
@@ -653,6 +652,10 @@ install_desktop_environment() {
 
 	echo "## Installing Fonts"
 	pacstrap $mountpoint ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
+
+	if $multilib_enabled ; then
+		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' $mountpoint/etc/pacman.conf
+	fi
 }
 
 finish_setup() {
