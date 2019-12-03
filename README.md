@@ -4,7 +4,8 @@ arch-install.sh
 Please read the ArchWiki [Installation Guide](https://wiki.archlinux.org/index.php/Installation_guide) and the [General 
 Recomendations](https://wiki.archlinux.org/index.php/General_recommendations), also read the script.
 
-For new improvements and bugs fill an issue in GitHub or make a pull request. Please test it in a VirtualBox virtual machine (recommended) before running on hardware.
+For new improvements and bugs file an issue in GitHub or make a pull request. 
+Please test it in a VirtualBox virtual machine before running it on hardware.
 
 ### Installation
 
