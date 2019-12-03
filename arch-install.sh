@@ -65,12 +65,6 @@ set_variables() {
 		fi
 	fi
 
-	# TODO : offer kernel list Stable | Hardened | Longterm | Zen
-	enable_lts=false
-	if whiptail --defaultno --yesno "Install linux-lts kernel?\n(long-term support stable/server orientated)" 8 60 ; then
-		enable_lts=true
-	fi
-
 	username=$(whiptail --nocancel --inputbox "Set username for sudo user to be created for this install" 10 40 3>&1 1>&2 2>&3)
 	# TODO : confirm and compare password twice
 	userpass=$(whiptail --nocancel --passwordbox "Set password for $username" 10 40 3>&1 1>&2 2>&3)
@@ -112,6 +106,13 @@ set_variables() {
 	if whiptail --defaultno --yesno "Install AUR helper (yay) to access the\narch user community-driven repository\n(which includes non-FOSS software)" 10 60 ; then
 		install_aur=true
 	fi
+
+	install_kernel=$(whiptail --nocancel --menu "Choose a kernel:" 18 100 10 \
+			linux "Stable — Vanilla Linux kernel and modules" \
+			linux-hardened "security-focused kernel (patches to mitigate kernel & userspace exploits)" \
+			linux-lts "Long-term support (LTS)" \
+			linux-zen "Collaborative patches via kernel hackers to provide for everyday systems" \
+		3>&1 1>&2 2>&3 )
 
 	install_desktop=false
 	if whiptail --defaultno --yesno "Install Desktop Environment?" 8 40 ; then
@@ -348,11 +349,7 @@ install_mirrorlist_reflector_hook() {
 install_base(){
 	pacman-key --refresh-keys
 	echo "## installing base system"
-	if ! $enable_lts ; then
-		pacstrap $mountpoint base linux linux-firmware
-	else
-		pacstrap $mountpoint base linux-lts linux-firmware
-	fi
+	pacstrap $mountpoint base $install_kernel linux-firmware
 
 	if `cat /proc/cpuinfo | grep vendor_id | grep -iq intel` ; then
 		echo "## installing intel ucode"
@@ -416,6 +413,7 @@ configure_system(){
 		echo -e "swapfc_enabled=1\n" \
 			| tee $mountpoint/etc/systemd/swap.conf.d/override.conf
 
+		# TODO : offer zram only for SSD drives
 		#zswap_enabled=0
 		#zram_enabled=1
 		#swapfc_enabled=0
@@ -592,9 +590,11 @@ install_desktop_environment() {
 	fi
 
 	if [[ "${install_packages[@]}" =~ "virtualbox" ]]; then
-		# TODO : only on stable kernel
-		# else : virtualbox-host-dkms linux-lts-headers
-		pacstrap $mountpoint virtualbox virtualbox-host-modules-arch virtualbox-guest-iso
+		host_modules_pkg="virtualbox-host-modules-arch"
+		if [ $install_kernel != "linux" ] ; then
+			host_modules_pkg="virtualbox-host-dkms $install_kernel-headers"
+		fi
+		pacstrap $mountpoint virtualbox $host_modules_pkg virtualbox-guest-iso
 		arch-chroot $mountpoint usermod -a -G vboxusers $username
 	fi
 
