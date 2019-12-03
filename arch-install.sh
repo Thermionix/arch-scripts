@@ -42,6 +42,7 @@ set_variables() {
 	if whiptail --defaultno --yes-button "Change Locale" \
 		--no-button "Accept" \
 		--yesno "The default locale is 'en_US.UTF-8'" 7 55 ; then
+			sed -i "s/en_US.UTF-8/#en_US.UTF-8/" /etc/locale.gen
 			shopt -s lastpipe
 			cat /etc/locale.gen | grep "UTF-8" | grep -oP "^[#]?\K[a-zA-Z0-9@._-]+" | sed 's/$/\n/g' | readarray -t locale_array
 			selected_locale=$(whiptail --noitem --default-item 'en_AU.UTF-8' --nocancel \
