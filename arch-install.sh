@@ -115,7 +115,7 @@ set_variables() {
 			linux-lts "Long-term support (LTS)" \
 			linux-zen "Collaborative patches via kernel hackers to provide for everyday systems" \
 		3>&1 1>&2 2>&3 )
-
+#todo add zfs repo
 	install_desktop=false
 	if whiptail --defaultno --yesno "Install Desktop Environment?" 8 40 ; then
 		install_desktop=$(whiptail --nocancel --menu "Choose a desktop environment:" 18 70 10 \
@@ -133,6 +133,7 @@ set_variables() {
 			xf86-video-nouveau "NVIDIA (nouveau opensource)" \
 		3>&1 1>&2 2>&3 )
 
+#todo add wine
 		install_packages=$(whiptail --nocancel \
 		--checklist "Choose software to be added:" 22 80 16 \
 			libreoffice-fresh "Free office suite" off \
@@ -327,6 +328,7 @@ update_mirrorlist() {
 		echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
 	fi
 
+#todo if pkgs include steam or wine
 	multilib_enabled=false
 	if [[ `uname -m` == x86_64 ]] && [ $install_desktop != false ] ; then
 		echo "## x86_64 detected, enabling multilib repository"
