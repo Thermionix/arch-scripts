@@ -326,6 +326,14 @@ update_mirrorlist() {
 		echo "## could not download mirrorlist"
 		echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
 	fi
+
+	multilib_enabled=false
+	if [[ `uname -m` == x86_64 ]]; then
+		echo "## x86_64 detected, enabling multilib repository"
+		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
+		pacman -Syy
+		multilib_enabled=true
+	fi
 }
 
 install_mirrorlist_reflector_hook() {
@@ -424,12 +432,6 @@ configure_system(){
 
 		echo vm.swappiness=5 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
 		echo vm.vfs_cache_pressure=50 | tee -a $mountpoint/etc/sysctl.d/99-sysctl.conf
-	fi
-
-	if [[ `uname -m` == x86_64 ]]; then
-		echo "## x86_64 detected, adding multilib repository"
-		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' $mountpoint/etc/pacman.conf
-		#pacman -Syy
 	fi
 }
 
@@ -579,14 +581,28 @@ install_desktop_environment() {
 		pacstrap $mountpoint xfce4 xfce4-goodies
 	fi
 
+	if [ $install_driver == "virtualbox-guest-utils" ] && [ $install_kernel == "linux" ] ; then
+		pacstrap $mountpoint virtualbox-guest-modules-arch
+	fi
+
 	pacstrap $mountpoint mesa $install_driver
+
+	if $multilib_enabled ; then
+		pacstrap $mountpoint lib32-mesa
+	fi
 
 	if [ $install_driver == "xf86-video-intel" ] ; then
 		pacstrap $mountpoint vulkan-icd-loader vulkan-intel intel-media-driver
 	elif [ $install_driver == "xf86-video-amdgpu" ] ; then
 		pacstrap $mountpoint vulkan-icd-loader vulkan-radeon libva-mesa-driver
+		if $multilib_enabled ; then
+			pacstrap $mountpoint lib32-libva-mesa-driver lib32-vulkan-radeon
+		fi
 	elif [ $install_driver == "xf86-video-ati" ] ; then
 		pacstrap $mountpoint mesa-vdpau
+		if $multilib_enabled ; then
+			pacstrap $mountpoint lib32-mesa-vdpau
+		fi
 	elif [ $install_driver == "xf86-video-nouveau" ] ; then
 		pacstrap $mountpoint libva-mesa-driver
 	fi
