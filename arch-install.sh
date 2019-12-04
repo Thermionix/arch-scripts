@@ -52,6 +52,7 @@ set_variables() {
 	sed -i -e "s/#$selected_locale/$selected_locale/" /etc/locale.gen
 	locale-gen
 
+	echo "## PLEASE SELECT YOUR TIMEZONE"
 	selected_timezone=$(tzselect)
 
 	#TODO : user machine id as default hostname
@@ -145,7 +146,7 @@ set_variables() {
 			keepassxc "Keepass password manager" off \
 			docker "run lightweight application containers" off \
 			virtualbox "x86 virtualization" off \
-			wine "A compatibility layer for running Windows programs" off \
+			wine "Compatibility layer for Windows programs" off \
 			firefox "Standalone web browser from mozilla.org" on \
 			thunderbird "mail and news reader from mozilla.org" on \
 			hexchat "graphical IRC (chat) client" off \
@@ -318,7 +319,7 @@ update_mirrorlist() {
 	if [[ -s ${mirrorlist_tmp} ]]; then
 		shopt -s lastpipe
 		tail -n +7  ${mirrorlist_tmp} | grep -oP "^## \K[a-zA-Z ]+" | sed 's/$/\n/g' | readarray countries
-		selected_country=$(whiptail --nocancel --menu "select mirrorlist country:" 22 60 14 "${countries[@]}" 3>&1 1>&2 2>&3)
+		selected_country=$(whiptail --nocancel --menu "select pacman mirrorlist country:" 22 60 14 "${countries[@]}" 3>&1 1>&2 2>&3)
 		sed -i -n "/## $selected_country/,/^\$/p" ${mirrorlist_tmp}
 		sed -i 's/^#Server/Server/g' ${mirrorlist_tmp}
 
@@ -450,7 +451,8 @@ install_bootloader()
 
 	if $enable_uefi ; then
 		pacstrap $mountpoint dosfstools efibootmgr
-		arch_chroot "grub-install --efi-directory=/boot/efi --target=x86_64-efi --bootloader-id=grub_uefi --recheck"
+		arch_chroot "grub-install --efi-directory=/boot/efi --target=x86_64-efi --bootloader-id=grub --recheck"
+		#efibootmgr --create --disk ${DSK} --part 1 --loader /EFI/grub/grubx64.efi --label "Grub Boot Manager" --verbose
 	else
 		pacstrap $mountpoint memtest86+ 
 		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
