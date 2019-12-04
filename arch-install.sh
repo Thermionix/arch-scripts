@@ -335,9 +335,10 @@ check_multilib_required() {
 	multilib_enabled=false
 	if [[ `uname -m` == x86_64 ]] && [ $install_desktop != false ] ; then
 		if [[ "${install_packages[@]}" =~ "steam" ]] || [[ "${install_packages[@]}" =~ "wine" ]] ; then
-		echo "## enabling multilib repository"
-		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
-		multilib_enabled=true
+			echo "## enabling multilib repository"
+			sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
+			multilib_enabled=true
+		fi
 	fi
 }
 
