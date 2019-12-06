@@ -156,6 +156,7 @@ set_variables() {
 			calibre "Ebook management application" off \
 			gimp "GNU Image Manipulation Program" on \
 			inkscape "vector graphics editor" on \
+			intellij-idea-community-edition "Java IDE" off \
 			networkmanager-openvpn "NetworkManager VPN plugin for OpenVPN" on \
 			youtube-dl "youtube cli downloader" on \
 			android-tools "Android platform tools" on \
@@ -579,6 +580,8 @@ install_aur_helper() {
 }
 
 install_desktop_environment() {
+	# TODO : concat all required pkgs and exec pacstrap once
+
 	pacstrap $mountpoint xorg-server xorg-xinit pulseaudio 
 
 	if [ $install_desktop == "mate" ] ; then
