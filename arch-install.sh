@@ -422,7 +422,7 @@ configure_system(){
 	arch_chroot "systemctl enable haveged"
 
 	echo "## disabling root login"
-	arch_chroot "passwd -l root"
+	arch_chroot "passwd --lock root"
 
 	if $enable_swap ; then
 		pacstrap $mountpoint systemd-swap
@@ -443,9 +443,37 @@ configure_system(){
 	fi
 }
 
+install_firejail()
+{
+	pacstrap $mountpoint firejail apparmor
+
+	# TODO : enable apparmor kernel params
+	# apparmor=1 security=apparmor
+
+	arch_chroot "apparmor_parser -r /etc/apparmor.d/firejail-default"
+
+	cat <<-'EOF' | tee $mountpoint/etc/pacman.d/hooks/firejail.hook
+		[Trigger]
+		Type = File
+		Operation = Install
+		Operation = Upgrade
+		Operation = Remove
+		Target = usr/bin/*
+		Target = usr/local/bin/*
+		Target = usr/share/applications/*.desktop
+
+		[Action]
+		Description = Configure symlinks in /usr/local/bin based on firecfg.config...
+		When = PostTransaction
+		Depends = firejail
+		Exec = /bin/sh -c 'firecfg &>/dev/null'
+	EOF
+}
+
 install_bootloader()
 {
-	# TODO : offer systemd-boot
+	# TODO : encrypt boot & password for grub
+	# TODO : offer os-prober?
 
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub 
