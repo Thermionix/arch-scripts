@@ -71,7 +71,7 @@ set_variables() {
 	# TODO : confirm and compare password twice
 	userpass=$(whiptail --nocancel --passwordbox "Set password for $username" 10 40 3>&1 1>&2 2>&3)
 
-	# TODO : offer more?
+	# TODO : offer other network managers?
 	setup_network=false
 	case $(whiptail --nocancel --menu "Choose a network daemon" 20 60 12 \
 	"NetworkManager" "(Desktop Orientated)" \
@@ -204,93 +204,52 @@ partition_disk() {
 		enable_trim=true
 	fi
 
-	enable_gpt=false
-	if $enable_uefi ; then
-		if whiptail --yesno "use GPT partitioning?\n(It is recommended to always use GPT for UEFI boot)" 8 60 ; then
-			enable_gpt=true
-		fi
+	enable_luks=false
+	if whiptail --defaultno --yesno "encrypt entire disk with dm-crypt?\n(kernel transparent disk encryption)" 8 40 ; then
+		enable_luks=true
 	fi
 
 	labelroot="arch-root"
-	labelboot="arch-boot"
 
-	if $enable_gpt ; then
-		if $enable_uefi ; then
-			esp_end=501
-			labelesp="arch-esp"
-			partesp="/dev/disk/by-partlabel/$labelesp"
-		else
-			esp_end=2
-		fi
-	else
-		esp_end=1
-	fi
-
-	boot_size=$(whiptail --nocancel --inputbox "Set boot partition size:" 10 40 "200" 3>&1 1>&2 2>&3)
-	boot_end=$(( ${esp_end} + ${boot_size} ))
-
-
-	if $enable_gpt ; then
-		partroot="/dev/disk/by-partlabel/$labelroot"
-		partboot="/dev/disk/by-partlabel/$labelboot"
-
+	if $enable_uefi ; then
 		parted -s ${DSK} mklabel gpt
 
-		echo "## creating partition bios_grub"
-		if $enable_uefi ; then
-			parted -s ${DSK} -a optimal unit MB mkpart ESI 1 ${esp_end}
-			parted -s ${DSK} set 1 boot on
-			parted -s ${DSK} mkfs 1 fat32
-			parted -s ${DSK} name 1 $labelesp
-		else
-			parted -s ${DSK} -a optimal unit MB mkpart primary 1 ${esp_end}
-			parted -s ${DSK} set 1 bios_grub on
-		fi
+		esp_end=501
+		labelesp="arch-esp"
+		partesp="/dev/disk/by-partlabel/$labelesp"
 
-		echo "## creating partition $labelboot"
-		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
-		parted -s ${DSK} name 2 $labelboot
+		echo "## creating EFI partition"
+		parted -s ${DSK} -a optimal unit MB mkpart ESI 1 ${esp_end}
+		parted -s ${DSK} set 1 boot on
+		parted -s ${DSK} mkfs 1 fat32
+		parted -s ${DSK} name 1 $labelesp
 
 		echo "## creating partition $labelroot"
-		parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
-		parted -s ${DSK} name 3 $labelroot
+		parted -s ${DSK} -a optimal unit MB -- mkpart primary ${esp_end} -1
+		parted -s ${DSK} name 2 $labelroot
+
+		partroot="/dev/disk/by-partlabel/$labelroot"
 	else
 		parted -s ${DSK} mklabel msdos
 
-		echo "## creating partition $labelboot"
-		parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} $boot_end
-		partboot="${DSK}1"
-
 		echo "## creating partition $labelroot"
-		parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_end -1
-		partroot="${DSK}2"
+		parted -s ${DSK} -a optimal unit MB -- mkpart primary 1 -1
+		partroot="${DSK}1"
 	fi
 
 	whiptail --title "generated partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
 }
 
 format_disk() {
-	if $enable_uefi ; then
-		mkfs.vfat -F 32 $partesp
-	fi
-
-	echo "## cleaning $partboot"
-	wipefs -a $partboot
-	echo "## mkfs $partboot"
-	mkfs.ext4 -q $partboot
-
 	mountpoint="/mnt"
-
-	enable_luks=false
-	if whiptail --defaultno --yesno "encrypt entire disk with dm-crypt?\n(kernel transparent disk encryption)" 8 40 ; then
-		enable_luks=true
-	fi
 
 	if $enable_luks ; then
 		maproot="croot"
 
+		# TODO : follow https://savannah.gnu.org/bugs/?55093 & remove --type luks1 when grub2 supports LUKS2 format
+
 		echo "## encrypting $partroot"
-		cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $partroot
+		cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 --type luks1 luksFormat $partroot
 		echo "## opening $partroot"
 		cryptsetup luksOpen $partroot $maproot
 		echo "## mkfs /dev/mapper/$maproot"
@@ -302,12 +261,12 @@ format_disk() {
 		mount $partroot $mountpoint
 	fi
 
-	mkdir -p $mountpoint/boot
-	mount $partboot $mountpoint/boot
-
 	if $enable_uefi ; then
-		mkdir -p $mountpoint/boot/efi
-		mount $partesp $mountpoint/boot/efi
+		echo "## mkfs $partesp"
+		mkfs.vfat -F 32 $partesp
+
+		mkdir -p $mountpoint/efi
+		mount $partesp $mountpoint/efi
 	fi
 }
 
@@ -443,49 +402,12 @@ configure_system(){
 	fi
 }
 
-install_firejail()
-{
-	pacstrap $mountpoint firejail apparmor
-
-	# TODO : enable apparmor kernel params
-	# apparmor=1 security=apparmor
-
-	arch_chroot "apparmor_parser -r /etc/apparmor.d/firejail-default"
-
-	cat <<-'EOF' | tee $mountpoint/etc/pacman.d/hooks/firejail.hook
-		[Trigger]
-		Type = File
-		Operation = Install
-		Operation = Upgrade
-		Operation = Remove
-		Target = usr/bin/*
-		Target = usr/local/bin/*
-		Target = usr/share/applications/*.desktop
-
-		[Action]
-		Description = Configure symlinks in /usr/local/bin based on firecfg.config...
-		When = PostTransaction
-		Depends = firejail
-		Exec = /bin/sh -c 'firecfg &>/dev/null'
-	EOF
-}
-
 install_bootloader()
 {
-	# TODO : encrypt boot & password for grub
-	# TODO : offer os-prober?
+	# TODO : offer password for grub
 
 	echo "## installing grub to ${DSK}"
-	pacstrap $mountpoint grub 
-
-	if $enable_uefi ; then
-		pacstrap $mountpoint dosfstools efibootmgr
-		arch_chroot "grub-install --efi-directory=/boot/efi --target=x86_64-efi --bootloader-id=grub --recheck"
-		#efibootmgr --create --disk ${DSK} --part 1 --loader /EFI/grub/grubx64.efi --label "Grub Boot Manager" --verbose
-	else
-		pacstrap $mountpoint memtest86+ 
-		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
-	fi
+	pacstrap $mountpoint grub os-prober
 
 	if $enable_luks ; then
 		cryptdevice="cryptdevice=$partroot:$maproot"
@@ -496,10 +418,19 @@ install_bootloader()
 		fi
 		sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/default/grub
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
+
+		echo -e "\nGRUB_ENABLE_CRYPTODISK=y" | tee --append $mountpoint/etc/default/grub
 	fi
 
-	if ! grep -q "GRUB_DISABLE_SUBMENU=y" $mountpoint/etc/default/grub ; then
-		echo -e "\nGRUB_DISABLE_SUBMENU=y" | sudo tee --append $mountpoint/etc/default/grub
+	echo -e "\nGRUB_DISABLE_SUBMENU=y" | tee --append $mountpoint/etc/default/grub
+
+	if $enable_uefi ; then
+		pacstrap $mountpoint dosfstools efibootmgr
+		arch_chroot "grub-install --efi-directory=/efi --target=x86_64-efi --bootloader-id=grub --recheck"
+		#efibootmgr --create --disk ${DSK} --part 1 --loader /EFI/grub/grubx64.efi --label "Grub Boot Manager" --verbose
+	else
+		pacstrap $mountpoint memtest86+ 
+		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
 	fi
 
 	echo "## printing /etc/default/grub"
@@ -551,7 +482,6 @@ enable_ntpd() {
 	fi
 
 	arch_chroot "ntpd -q"
-	#arch_chroot "hwclock -w"
 	arch_chroot "systemctl enable ntpd.service"
 }
 
@@ -696,6 +626,38 @@ install_desktop_environment() {
 	if $multilib_enabled ; then
 		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' $mountpoint/etc/pacman.conf
 	fi
+}
+
+install_firejail()
+{
+	pacstrap $mountpoint firejail apparmor
+
+	# TODO : enable apparmor kernel params
+	# apparmor=1 security=apparmor
+	# /etc/default/grub
+	# grub-mkconfig
+
+	echo "apparmor" | tee $mountpoint/etc/firejail/globals.local
+
+	cat <<-'EOF' | tee $mountpoint/etc/pacman.d/hooks/firejail.hook
+		[Trigger]
+		Type = File
+		Operation = Install
+		Operation = Upgrade
+		Operation = Remove
+		Target = usr/bin/*
+		Target = usr/local/bin/*
+		Target = usr/share/applications/*.desktop
+
+		[Action]
+		Description = Configure symlinks in /usr/local/bin based on firecfg.config...
+		When = PostTransaction
+		Depends = firejail
+		Exec = /bin/sh -c 'firecfg &>/dev/null'
+	EOF
+
+	arch_chroot "apparmor_parser -r /etc/apparmor.d/firejail-default"
+	# TODO : as user exec: firecfg --fix-sound && firecfg --fix
 }
 
 finish_setup() {
