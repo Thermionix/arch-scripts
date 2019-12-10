@@ -118,7 +118,7 @@ set_variables() {
 		3>&1 1>&2 2>&3 )
 
 	enable_firejail=false
-	if whiptail --defaultno --yesno "enable apparmor and firejail?\n(sandbox programs to secure system)" 10 60 ; then
+	if whiptail --defaultno --yesno "enable apparmor and firejail?\n(sandbox programs to harden the system)" 10 60 ; then
 		enable_firejail=true
 	fi
 
@@ -198,6 +198,11 @@ partition_disk() {
 	disks=`parted --list --script | awk -F ": |, |Disk | " '/Disk \// { print $2" "$3$4 }'`
 	DSK=$(whiptail --nocancel --menu "Select the Disk to install to" 18 45 10 $disks 3>&1 1>&2 2>&3)
 
+	enable_luks=false
+	if whiptail --defaultno --yesno "encrypt entire disk with dm-crypt?\n(kernel transparent disk encryption)" 8 40 ; then
+		enable_luks=true
+	fi
+
 	echo "## WILL COMPLETELY WIPE ${DSK}"
 	echo "## ARE YOU SURE ???"
 	read -p "Press [Enter] key to continue"
@@ -207,11 +212,6 @@ partition_disk() {
 	if [ -n "$(hdparm -I ${DSK} 2>&1 | grep 'TRIM supported')" ]; then
 		echo "## detected TRIM support"
 		enable_trim=true
-	fi
-
-	enable_luks=false
-	if whiptail --defaultno --yesno "encrypt entire disk with dm-crypt?\n(kernel transparent disk encryption)" 8 40 ; then
-		enable_luks=true
 	fi
 
 	labelroot="arch-root"
@@ -427,7 +427,7 @@ install_bootloader()
 		echo -e "\nGRUB_ENABLE_CRYPTODISK=y" | tee --append $mountpoint/etc/default/grub
 	fi
 
-	echo -e "\nGRUB_DISABLE_SUBMENU=y" | tee --append $mountpoint/etc/default/grub
+	#echo -e "\nGRUB_DISABLE_SUBMENU=y" | tee --append $mountpoint/etc/default/grub
 
 	if $enable_uefi ; then
 		pacstrap $mountpoint dosfstools efibootmgr
@@ -640,7 +640,7 @@ install_firejail()
 	sed -i -e "\#^GRUB_CMDLINE_LINUX_DEFAULT=#s#\"\$#apparmor=1 security=apparmor\"#" $mountpoint/etc/default/grub
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
-	arch_chroot "systemctl enable apparmor"
+	arch_chroot "systemctl enable apparmor.service"
 
 	echo "apparmor" | tee $mountpoint/etc/firejail/globals.local
 
@@ -661,7 +661,7 @@ install_firejail()
 		Exec = /bin/sh -c 'firecfg &>/dev/null'
 	EOF
 
-	arch_chroot "apparmor_parser -r /etc/apparmor.d/firejail-default"
+	#arch_chroot "apparmor_parser -r /etc/apparmor.d/firejail-default"
 	# aa-enforce firejail-default
 	# TODO : as created user exec: firecfg --fix-sound && firecfg --fix
 }
