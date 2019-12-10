@@ -117,6 +117,11 @@ set_variables() {
 			linux-zen "Collaborative patches via kernel hackers to provide for everyday systems" \
 		3>&1 1>&2 2>&3 )
 
+	enable_firejail=false
+	if whiptail --defaultno --yesno "enable apparmor and firejail?\n(sandbox programs to secure system)" 10 60 ; then
+		enable_firejail=true
+	fi
+
 	#TODO : offer add zfs repo
 
 	install_desktop=false
@@ -362,7 +367,7 @@ configure_system(){
 	if $enable_luks ; then
 		echo "## adding encrypt hook"
 		sed -i -e "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
-		arch_chroot "mkinitcpio -p linux"
+		arch_chroot "mkinitcpio -p $install_kernel"
 	fi
 
 	echo "## writing vconsole.conf"
@@ -632,10 +637,10 @@ install_firejail()
 {
 	pacstrap $mountpoint firejail apparmor
 
-	# TODO : enable apparmor kernel params
-	# apparmor=1 security=apparmor
-	# /etc/default/grub
-	# grub-mkconfig
+	sed -i -e "\#^GRUB_CMDLINE_LINUX_DEFAULT=#s#\"\$#apparmor=1 security=apparmor\"#" $mountpoint/etc/default/grub
+	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
+
+	arch_chroot "systemctl enable apparmor"
 
 	echo "apparmor" | tee $mountpoint/etc/firejail/globals.local
 
@@ -657,7 +662,8 @@ install_firejail()
 	EOF
 
 	arch_chroot "apparmor_parser -r /etc/apparmor.d/firejail-default"
-	# TODO : as user exec: firecfg --fix-sound && firecfg --fix
+	# aa-enforce firejail-default
+	# TODO : as created user exec: firecfg --fix-sound && firecfg --fix
 }
 
 finish_setup() {
@@ -706,6 +712,9 @@ function main() {
 		install_desktop_environment
 	fi
 	install_mirrorlist_reflector_hook
+	if $enable_firejail ; then
+		install_firejail
+	fi
 	finish_setup
 }
 
