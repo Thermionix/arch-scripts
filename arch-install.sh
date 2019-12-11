@@ -384,7 +384,7 @@ configure_system(){
 			mv /root/cryptlvm.keyfile $mountpoint/root/cryptlvm.keyfile
 			chmod 000 $mountpoint/root/cryptlvm.keyfile
 			chmod 600 $mountpoint/boot/initramfs-linux*
-			sed -i '/^FILES=""/s/""/(\/root\/cryptlvm.keyfile)/' $mountpoint/etc/mkinitcpio.conf
+			sed -i 's/^FILES=.*/FILES=(\/root\/cryptlvm.keyfile)/' $mountpoint/etc/mkinitcpio.conf
 		fi
 
 		arch_chroot "mkinitcpio -p $install_kernel"
