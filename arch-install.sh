@@ -203,8 +203,8 @@ partition_disk() {
 		enable_luks=true
 		luks_keyfile=false
 		if whiptail --yesno "Avoiding having to enter the passphrase twice?\n\nGRUB asks for a passphrase to unlock the LUKS1 encrypted partition, \
-			the partition unlock is not passed on to the initramfs. Hence, you have to enter the passphrase twice at boot: once for GRUB and once for \
-			the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; then
+the partition unlock is not passed on to the initramfs. Hence, you have to enter the passphrase twice at boot: once for GRUB and once for \
+the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; then
 			luks_keyfile=true
 		fi
 	fi
@@ -266,6 +266,12 @@ format_disk() {
 		echo "## mkfs /dev/mapper/$maproot"
 		mkfs.ext4 /dev/mapper/$maproot
 		mount /dev/mapper/$maproot $mountpoint
+
+		if $luks_keyfile ; then
+			echo "## adding luks keyfile to avoid multiple passwords on boot"
+			dd bs=512 count=4 if=/dev/random of=/root/cryptlvm.keyfile iflag=fullblock
+			cryptsetup -v luksAddKey $partroot /root/cryptlvm.keyfile
+		fi
 	else
 		echo "## mkfs $partroot"
 		mkfs.ext4 $partroot
@@ -375,11 +381,9 @@ configure_system(){
 		sed -i "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
 
 		if $luks_keyfile ; then
-			echo "## adding luks keyfile to avoid multiple passwords on boot"
-			dd bs=512 count=4 if=/dev/random of=$mountpoint/root/cryptlvm.keyfile iflag=fullblock
+			mv /root/cryptlvm.keyfile $mountpoint/root/cryptlvm.keyfile
 			chmod 000 $mountpoint/root/cryptlvm.keyfile
 			chmod 600 $mountpoint/boot/initramfs-linux*
-			cryptsetup -v luksAddKey $partroot $mountpoint/root/cryptlvm.keyfile
 			sed -i '/^FILES=""/s/""/(\/root\/cryptlvm.keyfile)/' $mountpoint/etc/mkinitcpio.conf
 		fi
 
@@ -695,7 +699,6 @@ finish_setup() {
 		if $enable_uefi ; then
 			umount -l $mountpoint/boot/efi
 		fi
-		umount -l $mountpoint/boot
 		umount -l $mountpoint
 
 		if $enable_luks ; then
