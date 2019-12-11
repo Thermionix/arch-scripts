@@ -201,6 +201,12 @@ partition_disk() {
 	enable_luks=false
 	if whiptail --defaultno --yesno "encrypt entire disk with dm-crypt?\n(kernel transparent disk encryption)" 8 40 ; then
 		enable_luks=true
+		luks_keyfile=false
+		if whiptail --yesno "Avoiding having to enter the passphrase twice?\n\nGRUB asks for a passphrase to unlock the LUKS1 encrypted partition, \
+			the partition unlock is not passed on to the initramfs. Hence, you have to enter the passphrase twice at boot: once for GRUB and once for \
+			the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; then
+			luks_keyfile=true
+		fi
 	fi
 
 	echo "## WILL COMPLETELY WIPE ${DSK}"
@@ -366,7 +372,17 @@ configure_system(){
 
 	if $enable_luks ; then
 		echo "## adding encrypt hook"
-		sed -i -e "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
+		sed -i "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
+
+		if $luks_keyfile ; then
+			echo "## adding luks keyfile to avoid multiple passwords on boot"
+			dd bs=512 count=4 if=/dev/random of=$mountpoint/root/cryptlvm.keyfile iflag=fullblock
+			chmod 000 $mountpoint/root/cryptlvm.keyfile
+			chmod 600 $mountpoint/boot/initramfs-linux*
+			cryptsetup -v luksAddKey $partroot $mountpoint/root/cryptlvm.keyfile
+			sed -i '/^FILES=""/s/""/(\/root\/cryptlvm.keyfile)/' $mountpoint/etc/mkinitcpio.conf
+		fi
+
 		arch_chroot "mkinitcpio -p $install_kernel"
 	fi
 
@@ -421,6 +437,11 @@ install_bootloader()
 			echo "## appending allow-discards for TRIM support"
 			cryptdevice+=":allow-discards"
 		fi
+
+		if $luks_keyfile ; then
+			cryptdevice+=" cryptkey=rootfs:/root/cryptlvm.keyfile"
+		fi
+
 		sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/default/grub
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
 
