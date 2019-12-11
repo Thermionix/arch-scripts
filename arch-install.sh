@@ -269,8 +269,8 @@ format_disk() {
 
 		if $luks_keyfile ; then
 			echo "## adding luks keyfile to avoid multiple passwords on boot"
-			dd bs=512 count=4 if=/dev/random of=/root/cryptlvm.keyfile iflag=fullblock
-			cryptsetup -v luksAddKey $partroot /root/cryptlvm.keyfile
+			dd bs=512 count=4 if=/dev/random of=/root/crypto_keyfile.bin iflag=fullblock
+			cryptsetup -v luksAddKey $partroot /root/crypto_keyfile.bin
 		fi
 	else
 		echo "## mkfs $partroot"
@@ -381,10 +381,10 @@ configure_system(){
 		sed -i "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
 
 		if $luks_keyfile ; then
-			mv /root/cryptlvm.keyfile $mountpoint/root/cryptlvm.keyfile
-			chmod 000 $mountpoint/root/cryptlvm.keyfile
+			mv /root/crypto_keyfile.bin $mountpoint/crypto_keyfile.bin
+			chmod 000 $mountpoint/crypto_keyfile.bin
 			chmod 600 $mountpoint/boot/initramfs-linux*
-			sed -i 's/^FILES=.*/FILES=(\/root\/cryptlvm.keyfile)/' $mountpoint/etc/mkinitcpio.conf
+			sed -i 's/^FILES=.*/FILES=(\/crypto_keyfile.bin)/' $mountpoint/etc/mkinitcpio.conf
 		fi
 
 		arch_chroot "mkinitcpio -p $install_kernel"
@@ -442,9 +442,9 @@ install_bootloader()
 			cryptdevice+=":allow-discards"
 		fi
 
-		if $luks_keyfile ; then
-			cryptdevice+=" cryptkey=rootfs:/root/cryptlvm.keyfile"
-		fi
+		#if $luks_keyfile ; then
+		#	cryptdevice+=" cryptkey=rootfs:/crypto_keyfile.bin"
+		#fi
 
 		sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/default/grub
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
