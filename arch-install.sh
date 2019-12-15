@@ -129,6 +129,7 @@ set_variables() {
 		install_desktop=$(whiptail --nocancel --menu "Choose a desktop environment:" 18 70 10 \
 			mate "MATE Desktop Environment is the continuation of GNOME 2" \
 			xfce "Xfce is a lightweight desktop environment" \
+			budgie-desktop "default desktop of Solus OS, written from scratch" \
 			gnome "GNOME Project open-source desktop environment" \
 		3>&1 1>&2 2>&3 )
 
@@ -445,6 +446,7 @@ install_bootloader()
 		#if $luks_keyfile ; then
 		#	cryptdevice+=" cryptkey=rootfs:/crypto_keyfile.bin"
 		#fi
+		chmod -R g-rwx,o-rwx $mountpoint/boot 
 
 		sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/default/grub
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
@@ -640,6 +642,8 @@ install_desktop_environment() {
 			echo -e "export XDG_SESSION_TYPE=x11\nexport GDK_BACKEND=x11\nexec gnome-session" > $mountpoint/home/$username/.xinitrc
 		elif [ $install_desktop == "xfce" ] ; then
 			echo "exec startxfce4" > $mountpoint/home/$username/.xinitrc
+		elif [ $install_desktop == "budgie-desktop" ] ; then
+			echo -e "export XDG_CURRENT_DESKTOP=Budgie:GNOME\nexec budgie-desktop" > $mountpoint/home/$username/.xinitrc
 		fi		
 		arch_chroot "chown -R $username:users /home/$username"
 	elif [ $install_login == "lightdm" ] ; then
