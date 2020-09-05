@@ -129,6 +129,7 @@ set_variables() {
 		install_desktop=$(whiptail --nocancel --menu "Choose a desktop environment:" 18 70 10 \
 			mate "MATE Desktop Environment is the continuation of GNOME 2" \
 			xfce "Xfce is a lightweight desktop environment" \
+			kde "Plasma 5 is the fifth and current generation of the graphical workspaces environment" \
 			budgie-desktop "default desktop of Solus OS, written from scratch" \
 			gnome "GNOME Project open-source desktop environment" \
 		3>&1 1>&2 2>&3 )
@@ -190,6 +191,7 @@ set_variables() {
 			autologin "passwordless auto-login straight to desktop" \
 			lightdm "Lightweight display manager" \
 			gdm "GNOME Display Manager" \
+			sddm "KDE Display Manager" \
 			none "Select for Headless/Server" \
 		3>&1 1>&2 2>&3 )
 	fi
@@ -575,11 +577,17 @@ install_desktop_environment() {
 	pacstrap $mountpoint xorg-server xorg-xinit pulseaudio 
 
 	if [ $install_desktop == "mate" ] ; then
-		pacstrap $mountpoint mate mate-extra network-manager-applet gnome-icon-theme
+		pacstrap $mountpoint mate mate-extra network-manager-applet gnome-icon-theme mate-applet-dock
 	elif [ $install_desktop == "gnome" ] ; then
 		pacstrap $mountpoint gnome gnome-extra
 	elif [ $install_desktop == "xfce" ] ; then
 		pacstrap $mountpoint xfce4 xfce4-goodies
+	elif [ $install_desktop == "kde" ] ; then
+		pacstrap $mountpoint plasma plasma-wayland-session kde-graphics-meta kde-utilities-meta
+		# kde-sdk-meta kde-network-meta
+	elif [ $install_desktop == "budgie-desktop" ] ; then
+		pacstrap $mountpoint budgie-desktop budgie-extras gnome-control-center network-manager-applet gnome-themes-extra
+		# gnome --ignore=gdm,epiphany,cheese,gnome-contacts,gnome-maps,gnome-music,gnome-shell,gnome-shell-extensions,yelp,vino
 	fi
 
 	if [ $install_driver == "virtualbox-guest-utils" ] && [ $install_kernel == "linux" ] ; then
@@ -642,6 +650,8 @@ install_desktop_environment() {
 			echo -e "export XDG_SESSION_TYPE=x11\nexport GDK_BACKEND=x11\nexec gnome-session" > $mountpoint/home/$username/.xinitrc
 		elif [ $install_desktop == "xfce" ] ; then
 			echo "exec startxfce4" > $mountpoint/home/$username/.xinitrc
+		elif [ $install_desktop == "kde" ] ; then
+			echo "export DESKTOP_SESSION=plasma\nexec startplasma-x11" > $mountpoint/home/$username/.xinitrc
 		elif [ $install_desktop == "budgie-desktop" ] ; then
 			echo -e "export XDG_CURRENT_DESKTOP=Budgie:GNOME\nexec budgie-desktop" > $mountpoint/home/$username/.xinitrc
 		fi		
@@ -652,6 +662,9 @@ install_desktop_environment() {
 	elif [ $install_login == "gdm" ] ; then
 		pacstrap $mountpoint gdm
 		arch_chroot "systemctl enable gdm.service"
+	elif [ $install_login == "sddm" ] ; then
+		pacstrap $mountpoint sddm
+		arch_chroot "systemctl enable sddm.service"
 	fi
 
 	echo "## Installing Fonts"
