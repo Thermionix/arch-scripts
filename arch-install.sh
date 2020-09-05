@@ -513,10 +513,10 @@ enable_ntpd() {
 	echo "## enabling network time daemon"
 	pacstrap $mountpoint ntp
 
-	if $enable_networkmanager ; then
+	#if $enable_networkmanager ; then
 		# now an aur package??
 		#pacstrap $mountpoint networkmanager-dispatcher-ntpd
-	fi
+	#fi
 
 	arch_chroot "ntpd -q"
 	arch_chroot "systemctl enable ntpd.service"
