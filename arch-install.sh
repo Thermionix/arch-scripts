@@ -654,7 +654,7 @@ install_desktop_environment() {
 		elif [ $install_desktop == "xfce" ] ; then
 			echo "exec startxfce4" > $mountpoint/home/$username/.xinitrc
 		elif [ $install_desktop == "kde" ] ; then
-			echo "export DESKTOP_SESSION=plasma\nexec startplasma-x11" > $mountpoint/home/$username/.xinitrc
+			echo -e "export DESKTOP_SESSION=plasma\nexec startplasma-x11" > $mountpoint/home/$username/.xinitrc
 		elif [ $install_desktop == "budgie-desktop" ] ; then
 			echo -e "export XDG_CURRENT_DESKTOP=Budgie:GNOME\nexec budgie-desktop" > $mountpoint/home/$username/.xinitrc
 		fi		
