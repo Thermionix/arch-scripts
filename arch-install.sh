@@ -129,7 +129,7 @@ set_variables() {
 		install_desktop=$(whiptail --nocancel --menu "Choose a desktop environment:" 18 70 10 \
 			mate "MATE Desktop Environment is the continuation of GNOME 2" \
 			xfce "Xfce is a lightweight desktop environment" \
-			kde "Plasma 5 is the fifth and current generation of the graphical workspaces environment" \
+			kde "Plasma 5 fifth generation KDE environment" \
 			budgie-desktop "default desktop of Solus OS, written from scratch" \
 			gnome "GNOME Project open-source desktop environment" \
 		3>&1 1>&2 2>&3 )
@@ -344,7 +344,9 @@ install_mirrorlist_reflector_hook() {
 }
 
 install_base(){
-	pacman-key --refresh-keys
+	#pacman -Sy --noconfirm archlinux-keyring
+	#pacman-key --refresh-keys --keyserver hkps://keyserver.ubuntu.com:443
+	pacman-key --refresh-keys --keyserver hkp://keys.gnupg.net:80
 	echo "## installing base system"
 	pacstrap $mountpoint base $install_kernel linux-firmware
 
