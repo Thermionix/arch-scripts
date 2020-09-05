@@ -586,8 +586,7 @@ install_desktop_environment() {
 	elif [ $install_desktop == "xfce" ] ; then
 		pacstrap $mountpoint xfce4 xfce4-goodies
 	elif [ $install_desktop == "kde" ] ; then
-		pacstrap $mountpoint plasma plasma-wayland-session kde-graphics-meta kde-utilities-meta
-		# kde-sdk-meta kde-network-meta
+		pacstrap $mountpoint plasma plasma-wayland-session kde-graphics-meta kde-utilities-meta dolphin
 	elif [ $install_desktop == "budgie-desktop" ] ; then
 		pacstrap $mountpoint budgie-desktop budgie-extras gnome-control-center network-manager-applet gnome-themes-extra
 		# gnome --ignore=gdm,epiphany,cheese,gnome-contacts,gnome-maps,gnome-music,gnome-shell,gnome-shell-extensions,yelp,vino
