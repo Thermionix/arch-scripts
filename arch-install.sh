@@ -593,8 +593,8 @@ install_desktop_environment() {
 		# gnome --ignore=gdm,epiphany,cheese,gnome-contacts,gnome-maps,gnome-music,gnome-shell,gnome-shell-extensions,yelp,vino
 	fi
 
-	if [ $install_driver == "virtualbox-guest-utils" ] && [ $install_kernel == "linux" ] ; then
-		pacstrap $mountpoint virtualbox-guest-modules-arch
+	if [ $install_driver == "virtualbox-guest-utils" ] ; then
+		pacstrap $mountpoint virtualbox-guest-utils
 	fi
 
 	pacstrap $mountpoint mesa $install_driver
