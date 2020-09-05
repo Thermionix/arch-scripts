@@ -127,7 +127,7 @@ set_variables() {
 	install_desktop=false
 	if whiptail --defaultno --yesno "Install Desktop Environment?" 8 40 ; then
 		install_desktop=$(whiptail --nocancel --menu "Choose a desktop environment:" 18 70 10 \
-			mate "MATE Desktop Environment is the continuation of GNOME 2" \
+			mate "MATE is the continuation of GNOME 2" \
 			xfce "Xfce is a lightweight desktop environment" \
 			kde "Plasma 5 fifth generation KDE environment" \
 			budgie-desktop "default desktop of Solus OS, written from scratch" \
@@ -514,7 +514,8 @@ enable_ntpd() {
 	pacstrap $mountpoint ntp
 
 	if $enable_networkmanager ; then
-		pacstrap $mountpoint networkmanager-dispatcher-ntpd
+		# now an aur package??
+		#pacstrap $mountpoint networkmanager-dispatcher-ntpd
 	fi
 
 	arch_chroot "ntpd -q"

@@ -14,7 +14,7 @@ Internet connection is required, with wireless WIFI connection see [Wireless_net
 
 from a booted arch install iso;
 ```
-wget https://raw.githubusercontent.com/Thermionix/arch-scripts/master/arch-install.sh
+curl -O https://raw.githubusercontent.com/Thermionix/arch-scripts/master/arch-install.sh
 bash arch-install.sh
 ```
  
