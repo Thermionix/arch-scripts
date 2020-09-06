@@ -4,8 +4,11 @@ set -e
 command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script" >&2 ; exit 1 ; }
 # TODO : log all output
 
+export NEWT_COLORS='root=,black'
+GREEN=$(tput setaf 2)
+
 check_net_connectivity() {
-	echo "## checking net connectivity"
+	echo "${GREEN}## checking net connectivity"
 	ping -c 2 archlinux.org
 
 	# TODO : offer wifimenu ?
@@ -13,19 +16,19 @@ check_net_connectivity() {
 	# TODO : check default gateway is set?
 	#ip route add default via <gw-ip>
 
-	echo "## ensuring the system clock is accurate"
+	echo "${GREEN}## ensuring the system clock is accurate"
 	timedatectl set-ntp true
 }
 
 enable_ssh() {
 	systemctl start sshd
 	ipaddr=`ip addr | grep inet | grep -e enp -e wlan | awk '{print $2}' | cut -d "/" -f1`
-	echo "## set passwd for login with ssh root@$ipaddr"
+	echo "${GREEN}## set passwd for login with ssh root@$ipaddr"
 	passwd
 }
 
 set_variables() {
-	echo "## defining variables for installation"
+	echo "${GREEN}## defining variables for installation"
 
 	selected_keymap="us"
 	if whiptail --defaultno --yes-button "Change Keymap" \
@@ -52,7 +55,7 @@ set_variables() {
 	sed -i -e "s/#$selected_locale/$selected_locale/" /etc/locale.gen
 	locale-gen
 
-	echo "## PLEASE SELECT YOUR TIMEZONE"
+	echo "${GREEN}## PLEASE SELECT YOUR TIMEZONE"
 	selected_timezone=$(tzselect)
 
 	#TODO : user machine id as default hostname
@@ -140,6 +143,7 @@ set_variables() {
 			xf86-video-intel "Intel" \
 			xf86-video-amdgpu "AMDGPU" \
 			xf86-video-ati "ATI (old cards)" \
+			nvidia "NVIDIA proprietary driver" \
 			xf86-video-nouveau "NVIDIA (nouveau opensource)" \
 		3>&1 1>&2 2>&3 )
 
@@ -149,17 +153,21 @@ set_variables() {
 			brasero "CD/DVD mastering tool" off \
 			steam "Valves game delivery client" off \
 			steam-native-runtime "Native replacement for Steam runtime" off \
+			discord "proprietary all-in-one voice and text chat application" off \
 			syncthing "Continuous network file synchronization" off \
 			keepassxc "Keepass password manager" off \
 			docker "run lightweight application containers" off \
 			virtualbox "x86 virtualization" off \
 			wine "Compatibility layer for Windows programs" off \
 			firefox "Standalone web browser from mozilla.org" on \
+			chromium "open-source browser from Google" off \
 			thunderbird "mail and news reader from mozilla.org" on \
+			signal-desktop "Signal Private Messenger for Linux" off \
 			hexchat "graphical IRC (chat) client" off \
 			geary "Lightweight email client" off \
 			vlc "Media Player" on \
-			rhythmbox "Music Player" off \
+			rhythmbox "GNOME Music Player" off \
+			elisa "KDE Music Player" off \
 			calibre "Ebook management application" off \
 			gimp "GNU Image Manipulation Program" on \
 			inkscape "vector graphics editor" on \
@@ -216,14 +224,14 @@ the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; the
 		fi
 	fi
 
-	echo "## WILL COMPLETELY WIPE ${DSK}"
-	echo "## ARE YOU SURE ???"
+	echo "${GREEN}## WILL COMPLETELY WIPE ${DSK}"
+	echo "${GREEN}## ARE YOU SURE ???"
 	read -p "Press [Enter] key to continue"
 	sgdisk --zap-all ${DSK}
 
 	enable_trim=false
 	if [ -n "$(hdparm -I ${DSK} 2>&1 | grep 'TRIM supported')" ]; then
-		echo "## detected TRIM support"
+		echo "${GREEN}## detected TRIM support"
 		enable_trim=true
 	fi
 
@@ -241,7 +249,7 @@ the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; the
 		labelesp="arch-esp"
 		partesp="/dev/disk/by-partlabel/$labelesp"
 		
-		echo "## creating EFI partition"
+		echo "${GREEN}## creating EFI partition"
 		parted -s ${DSK} -a optimal unit MB mkpart ESI 1 ${esp_end}
 		parted -s ${DSK} set 1 boot on
 		parted -s ${DSK} mkfs 1 fat32
@@ -250,17 +258,17 @@ the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; the
 		if [ $enable_luks = true ] && [ $encrypted_boot = false ]  ; then
 			boot_end=$(( ${esp_end} + ${boot_size} ))
 			
-			echo "## creating partition $labelboot"
+			echo "${GREEN}## creating partition $labelboot"
 			parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} ${boot_end}
 			parted -s ${DSK} name 2 $labelboot
 
-			echo "## creating partition $labelroot"
+			echo "${GREEN}## creating partition $labelroot"
 			parted -s ${DSK} -a optimal unit MB -- mkpart primary ${boot_end} -1
 			parted -s ${DSK} name 3 $labelroot
 
 			partboot="/dev/disk/by-partlabel/$labelboot"	
 		else
-			echo "## creating partition $labelroot"
+			echo "${GREEN}## creating partition $labelroot"
 			parted -s ${DSK} -a optimal unit MB -- mkpart primary ${esp_end} -1
 			parted -s ${DSK} name 2 $labelroot
 		fi
@@ -269,15 +277,15 @@ the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; the
 		parted -s ${DSK} mklabel msdos
 		
 		if [ $enable_luks = true ] && [ $encrypted_boot = false ]  ; then
-			echo "## creating partition $labelboot"
+			echo "${GREEN}## creating partition $labelboot"
 			parted -s ${DSK} -a optimal unit MB mkpart primary 1 $boot_size
 			partboot="${DSK}1"
 
-			echo "## creating partition $labelroot"
+			echo "${GREEN}## creating partition $labelroot"
 			parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_size -1
 			partroot="${DSK}2"
 		else
-			echo "## creating partition $labelroot"
+			echo "${GREEN}## creating partition $labelroot"
 			parted -s ${DSK} -a optimal unit MB -- mkpart primary 1 -1
 			partroot="${DSK}1"
 		fi
@@ -292,14 +300,14 @@ format_disk() {
 
 	if [ $enable_luks = true ] ; then
 		if [ $encrypted_boot = false ] ; then
-			echo "## cleaning $partboot"
+			echo "${GREEN}## cleaning $partboot"
 			wipefs -a $partboot
-			echo "## mkfs $partboot"
+			echo "${GREEN}## mkfs $partboot"
 			mkfs.ext4 -q $partboot
 		fi
 
 		# TODO : follow https://savannah.gnu.org/bugs/?55093 & remove --type luks1 when grub2 supports LUKS2 format
-		echo "## encrypting $partroot"
+		echo "${GREEN}## encrypting $partroot"
 		if [ $encrypted_boot = false ] ; then
 			cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $partroot
 		else
@@ -308,14 +316,14 @@ format_disk() {
 	
 		maproot="croot"
 
-		echo "## opening $partroot"
+		echo "${GREEN}## opening $partroot"
 		cryptsetup luksOpen $partroot $maproot
-		echo "## mkfs /dev/mapper/$maproot"
+		echo "${GREEN}## mkfs /dev/mapper/$maproot"
 		mkfs.ext4 /dev/mapper/$maproot
 		mount /dev/mapper/$maproot $mountpoint
 
 		if [ $luks_keyfile = true ] ; then
-			echo "## adding luks keyfile to avoid multiple passwords on boot"
+			echo "${GREEN}## adding luks keyfile to avoid multiple passwords on boot"
 			dd bs=512 count=4 if=/dev/random of=/root/crypto_keyfile.bin iflag=fullblock
 			cryptsetup -v luksAddKey $partroot /root/crypto_keyfile.bin
 		fi
@@ -325,13 +333,13 @@ format_disk() {
 			mount $partboot $mountpoint/boot
 		fi
 	else
-		echo "## mkfs $partroot"
+		echo "${GREEN}## mkfs $partroot"
 		mkfs.ext4 $partroot
 		mount $partroot $mountpoint
 	fi
 
 	if [ $enable_uefi = true ] ; then
-		echo "## mkfs $partesp"
+		echo "${GREEN}## mkfs $partesp"
 		mkfs.vfat -F 32 $partesp
 
 		mkdir -p $mountpoint/efi
@@ -356,7 +364,7 @@ update_mirrorlist() {
 		mv ${mirrorlist_tmp} /etc/pacman.d/mirrorlist
 		chmod +r /etc/pacman.d/mirrorlist
 	else
-		echo "## could not download mirrorlist"
+		echo "${GREEN}## could not download mirrorlist"
 		echo "Server=https://mirrors.kernel.org/archlinux/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
 	fi
 }
@@ -365,7 +373,7 @@ check_multilib_required() {
 	multilib_enabled=false
 	if [[ `uname -m` == x86_64 ]] && [ $install_desktop != false ] ; then
 		if [[ "${install_packages[@]}" =~ "steam" ]] || [[ "${install_packages[@]}" =~ "wine" ]] ; then
-			echo "## enabling multilib repository"
+			echo "${GREEN}## enabling multilib repository"
 			sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
 			multilib_enabled=true
 		fi
@@ -396,22 +404,22 @@ install_base(){
 	#pacman -Sy --noconfirm archlinux-keyring
 	#pacman-key --refresh-keys --keyserver hkps://keyserver.ubuntu.com:443
 	pacman-key --refresh-keys --keyserver hkp://keys.gnupg.net:80
-	echo "## installing base system"
+	echo "${GREEN}## installing base system"
 	pacstrap $mountpoint base $install_kernel linux-firmware
 
 	if `cat /proc/cpuinfo | grep vendor_id | grep -iq intel` ; then
-		echo "## installing intel ucode"
+		echo "${GREEN}## installing intel ucode"
 		pacstrap $mountpoint intel-ucode
 	fi
 
 	if `cat /proc/cpuinfo | grep vendor_id | grep -iq amd` ; then
-		echo "## installing amd ucode"
+		echo "${GREEN}## installing amd ucode"
 		pacstrap $mountpoint amd-ucode
 	fi
 }
 
 configure_fstab(){
-	echo "## generating fstab entries"
+	echo "${GREEN}## generating fstab entries"
 	genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
 
 	if [ $enable_trim = true ] ; then
@@ -424,14 +432,14 @@ arch_chroot(){
 }
 
 configure_system(){
-	echo "## updating locale"
+	echo "${GREEN}## updating locale"
 	sed -i -e "s/#$selected_locale/$selected_locale/" $mountpoint/etc/locale.gen
 	arch_chroot "locale-gen"
 	echo LANG=$selected_locale > $mountpoint/etc/locale.conf
 	arch_chroot "export LANG=$selected_locale"
 
 	if [ $enable_luks = true ] ; then
-		echo "## adding encrypt hook"
+		echo "${GREEN}## adding encrypt hook"
 		sed -i "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
 
 		if [ $luks_keyfile = true ] ; then
@@ -444,22 +452,22 @@ configure_system(){
 		arch_chroot "mkinitcpio -p $install_kernel"
 	fi
 
-	echo "## writing vconsole.conf"
+	echo "${GREEN}## writing vconsole.conf"
 	echo "KEYMAP=$selected_keymap" > $mountpoint/etc/vconsole.conf
 	echo "FONT=Lat2-Terminus16" >> $mountpoint/etc/vconsole.conf
 
-	echo "## updating localtime"
+	echo "${GREEN}## updating localtime"
 	arch_chroot "ln -s /usr/share/zoneinfo/$selected_timezone /etc/localtime"
 	arch_chroot "hwclock --systohc --utc"
 
-	echo "## setting hostname"
+	echo "${GREEN}## setting hostname"
 	echo $hostname > $mountpoint/etc/hostname
 
-	echo "## enabling haveged for better randomness"
+	echo "${GREEN}## enabling haveged for better randomness"
 	pacstrap $mountpoint haveged
 	arch_chroot "systemctl enable haveged"
 
-	echo "## disabling root login"
+	echo "${GREEN}## disabling root login"
 	arch_chroot "passwd --lock root"
 
 	if [ $enable_swap = true ] ; then
@@ -483,14 +491,14 @@ configure_system(){
 
 install_bootloader()
 {
-	echo "## installing grub to ${DSK}"
+	echo "${GREEN}## installing grub to ${DSK}"
 	pacstrap $mountpoint grub os-prober
 
 	if [ $enable_luks = true ] ; then
 		cryptdevice="cryptdevice=$partroot:$maproot"
 
 		if [ $enable_trim = true ] ; then 
-			echo "## appending allow-discards for TRIM support"
+			echo "${GREEN}## appending allow-discards for TRIM support"
 			cryptdevice+=":allow-discards"
 		fi
 
@@ -522,10 +530,10 @@ install_bootloader()
 		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
 	fi
 
-	echo "## printing /etc/default/grub"
+	echo "${GREEN}## printing /etc/default/grub"
 	cat $mountpoint/etc/default/grub
 
-	echo "## generating /boot/grub/grub.cfg"
+	echo "${GREEN}## generating /boot/grub/grub.cfg"
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
 	cat <<-'EOF' | tee $mountpoint/boot/grub/custom.cfg
@@ -545,20 +553,20 @@ install_bootloader()
 	EOF
 
 	if [ $enable_luks = true ] ; then
-		echo "## printing cryptdevice line from /boot/grub/grub.cfg"
+		echo "${GREEN}## printing cryptdevice line from /boot/grub/grub.cfg"
 		cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"
 	fi
 }
 
 create_user() {
-	echo "## adding user: $username"
+	echo "${GREEN}## adding user: $username"
 	pacstrap $mountpoint sudo nano
 	arch_chroot "useradd -m -g users -G wheel,audio,network,power,storage,optical -s /bin/bash $username"
 
-	echo "## setting password for user $username"
+	echo "${GREEN}## setting password for user $username"
 	arch_chroot "printf \"$userpass\n$userpass\" | passwd $username"
 
-	echo "## allowing members of wheel group as sudoers"
+	echo "${GREEN}## allowing members of wheel group as sudoers"
 	sed -i '/%wheel ALL=(ALL) ALL/s/^#//' $mountpoint/etc/sudoers
 
 	echo "export EDITOR=\"nano\"" >> $mountpoint/home/$username/.bashrc
@@ -567,19 +575,19 @@ create_user() {
 install_network_daemon() {
 	enable_networkmanager=false
 	if [ $setup_network == "networkmanager" ] ; then
-			echo "## installing NetworkManager"
+			echo "${GREEN}## installing NetworkManager"
 			pacstrap $mountpoint networkmanager
 			arch_chroot "systemctl enable NetworkManager && systemctl enable NetworkManager-dispatcher.service"
 			enable_networkmanager=true
 	elif [ $setup_network == "networkd" ] ; then
-			echo "## enabling systemd-networkd"
+			echo "${GREEN}## enabling systemd-networkd"
 			arch_chroot "systemctl enable systemd-networkd.service"
-			echo "## read https://wiki.archlinux.org/index.php/Systemd-networkd for configuration"
+			echo "${GREEN}## read https://wiki.archlinux.org/index.php/Systemd-networkd for configuration"
 	fi
 }
 
 enable_ntpd() {
-	echo "## enabling network time daemon"
+	echo "${GREEN}## enabling network time daemon"
 	pacstrap $mountpoint ntp
 
 	#if [ $enable_networkmanager = true ] ; then
@@ -597,7 +605,7 @@ enable_sshd() {
 }
 
 paccache_cleanup() {
-	echo "## adding weekly timer to cleanup pacman pkg cache"
+	echo "${GREEN}## adding weekly timer to cleanup pacman pkg cache"
 	pacstrap $mountpoint pacman-contrib
 
 	cat <<-'EOF' | tee $mountpoint/etc/systemd/system/paccache-clean.timer
@@ -627,7 +635,7 @@ paccache_cleanup() {
 }
 
 install_aur_helper() {
-	echo "## Installing yay AUR Helper"
+	echo "${GREEN}## Installing yay AUR Helper"
 	pacstrap $mountpoint base-devel git
 
 	sed -i 's/%wheel ALL=(ALL) ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' $mountpoint/etc/sudoers
@@ -683,6 +691,13 @@ install_desktop_environment() {
 		if [ $multilib_enabled = true ] ; then
 			pacstrap $mountpoint lib32-mesa-vdpau
 		fi
+    elif [ $install_driver == "nvidia" ] ; then
+        if [ $multilib_enabled = true ] ; then
+			pacstrap $mountpoint lib32-nvidia-utils
+		fi
+		if [ $install_kernel != "linux" ] ; then
+            pacstrap $mountpoint nvidia-dkms
+		fi
 	elif [ $install_driver == "xf86-video-nouveau" ] ; then
 		pacstrap $mountpoint libva-mesa-driver
 	fi
@@ -708,11 +723,11 @@ install_desktop_environment() {
 	fi
 
 	if [ $install_login == "autologin" ] ; then
-		echo "## enabling autologin for user: $username"
+		echo "${GREEN}## enabling autologin for user: $username"
 		mkdir -p $mountpoint/etc/systemd/system/getty@tty1.service.d
 		echo -e "[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin $username --noclear %I 38400 linux" \
 			| tee $mountpoint/etc/systemd/system/getty@tty1.service.d/autologin.conf
-		echo "## Enabling Xorg Autostart"
+		echo "${GREEN}## Enabling Xorg Autostart"
 		echo "[[ -z \$DISPLAY && \$XDG_VTNR -eq 1 ]] && exec startx" >> $mountpoint/home/$username/.bash_profile
 		
 		if [ $install_desktop == "mate" ] ; then
@@ -738,7 +753,7 @@ install_desktop_environment() {
 		arch_chroot "systemctl enable sddm.service"
 	fi
 
-	echo "## Installing Fonts"
+	echo "${GREEN}## Installing Fonts"
 	pacstrap $mountpoint ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 
 	if [ $multilib_enabled = true ] ; then
@@ -782,7 +797,7 @@ install_firejail()
 finish_setup() {
 	#TODO: offer to umount | reboot | poweroff | do nothing
 	if whiptail --yesno "Reboot now?" 8 40 ; then
-		echo "## unmounting and rebooting"
+		echo "${GREEN}## unmounting and rebooting"
 
 		if [ $enable_uefi = true ] ; then
 			umount -l $mountpoint/boot/efi
