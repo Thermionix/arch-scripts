@@ -513,7 +513,7 @@ install_bootloader()
 	sed -i -e "s/#GRUB_SAVEDEFAULT/GRUB_SAVEDEFAULT/" $mountpoint/etc/default/grub
 	sed -i -e "s/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/" $mountpoint/etc/default/grub
 	
-	cat <<-EOF | tee $mountpoint/etc/grub.d/40_custom
+	cat <<-'EOF' | tee $mountpoint/etc/grub.d/40_custom
 menuentry "System shutdown" {
 	echo "System shutting down..."
 	halt
@@ -583,7 +583,7 @@ enable_ntpd() {
 	pacstrap $mountpoint ntp
 
 	#if [ $enable_networkmanager = true ] ; then
-		# now an aur package??
+		# TODO : now an aur package??
 		#pacstrap $mountpoint networkmanager-dispatcher-ntpd
 	#fi
 
