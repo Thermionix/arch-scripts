@@ -29,7 +29,7 @@ bash arch-install.sh
 * User creation and add to sudoers
 * Common packages installation
 * AUR utility installation (yay)
-* Desktop environments (GDM, XFCE, Mate), display managers (GDM, Lightdm) and no desktop environment
+* Desktop environments (GDM, XFCE, Mate, KDE), display managers (GDM, SDDM, Lightdm) and no desktop environment
 * Graphic drivers (intel, nvidia, amd)
 * Optional _entire disk_ encryption with encrypted GRUB bootloader
 * Hardened kernel available

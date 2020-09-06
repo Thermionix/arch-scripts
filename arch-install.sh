@@ -513,21 +513,21 @@ install_bootloader()
 	sed -i -e "s/#GRUB_SAVEDEFAULT/GRUB_SAVEDEFAULT/" $mountpoint/etc/default/grub
 	sed -i -e "s/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/" $mountpoint/etc/default/grub
 	
-	cat <<-'EOF' | tee $mountpoint/etc/grub.d/40_custom
-menuentry "System shutdown" {
-	echo "System shutting down..."
-	halt
-}
-menuentry "System restart" {
-	echo "System rebooting..."
-	reboot
-}
-if [ ${grub_platform} == "efi" ]; then
-	menuentry "Firmware setup" {
-		fwsetup
-	}
-fi
-EOF
+	cat <<-'EOF' | tee $mountpoint/boot/grub/custom.cfg
+		menuentry "System shutdown" {
+			echo "System shutting down..."
+			halt
+		}
+		menuentry "System restart" {
+			echo "System rebooting..."
+			reboot
+		}
+		if [ ${grub_platform} == "efi" ]; then
+			menuentry "Firmware setup" {
+				fwsetup
+			}
+		fi
+	EOF
 
 	if [ $enable_uefi = true ] ; then
 		pacstrap $mountpoint dosfstools efibootmgr
