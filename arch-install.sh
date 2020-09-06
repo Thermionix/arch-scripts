@@ -6,7 +6,7 @@ command -v whiptail >/dev/null 2>&1 || { echo "whiptail required for this script
 
 export NEWT_COLORS='root=,black'
 GREEN=$(tput setaf 2)
-BLACK=$(tput setaf 0)
+BLACK=$(tput sgr0)
 
 check_net_connectivity() {
 	echo "${GREEN}## checking net connectivity${BLACK}"
