@@ -34,3 +34,6 @@ bash arch-install.sh
 * Optional _entire disk_ encryption with encrypted GRUB bootloader
 * Hardened kernel available
 * firejail & apparmor support
+
+![Screenshot from 2020-09-06 11-41-24](https://user-images.githubusercontent.com/622615/92316407-0d6bba80-efe3-11ea-86c4-5ba04d289601.png)
+![Screenshot from 2020-09-06 11-42-09](https://user-images.githubusercontent.com/622615/92316404-080e7000-efe3-11ea-98b7-6df7458b7c0c.png)
