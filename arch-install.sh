@@ -144,7 +144,7 @@ set_variables() {
 		3>&1 1>&2 2>&3 )
 
 		install_packages=$(whiptail --nocancel \
-		--checklist "Choose software to be added:" 22 80 16 \
+		--checklist "Choose software to be added:" 22 100 16 \
 			libreoffice-fresh "Free office suite" off \
 			brasero "CD/DVD mastering tool" off \
 			steam "Valves game delivery client" off \
@@ -513,6 +513,21 @@ install_bootloader()
 	sed -i -e "s/#GRUB_SAVEDEFAULT/GRUB_SAVEDEFAULT/" $mountpoint/etc/default/grub
 	sed -i -e "s/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/" $mountpoint/etc/default/grub
 	
+	if [ $enable_uefi = true ] ; then
+		pacstrap $mountpoint dosfstools efibootmgr
+		arch_chroot "grub-install --efi-directory=/efi --target=x86_64-efi --bootloader-id=grub --recheck"
+		#efibootmgr --create --disk ${DSK} --part 1 --loader /EFI/grub/grubx64.efi --label "Grub Boot Manager" --verbose
+	else
+		pacstrap $mountpoint memtest86+ 
+		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
+	fi
+
+	echo "## printing /etc/default/grub"
+	cat $mountpoint/etc/default/grub
+
+	echo "## generating /boot/grub/grub.cfg"
+	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
+
 	cat <<-'EOF' | tee $mountpoint/boot/grub/custom.cfg
 		menuentry "System shutdown" {
 			echo "System shutting down..."
@@ -528,21 +543,6 @@ install_bootloader()
 			}
 		fi
 	EOF
-
-	if [ $enable_uefi = true ] ; then
-		pacstrap $mountpoint dosfstools efibootmgr
-		arch_chroot "grub-install --efi-directory=/efi --target=x86_64-efi --bootloader-id=grub --recheck"
-		#efibootmgr --create --disk ${DSK} --part 1 --loader /EFI/grub/grubx64.efi --label "Grub Boot Manager" --verbose
-	else
-		pacstrap $mountpoint memtest86+ 
-		arch_chroot "grub-install --target=i386-pc --recheck ${DSK}"
-	fi
-
-	echo "## printing /etc/default/grub"
-	cat $mountpoint/etc/default/grub
-
-	echo "## generating /boot/grub/grub.cfg"
-	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
 	if [ $enable_luks = true ] ; then
 		echo "## printing cryptdevice line from /boot/grub/grub.cfg"
