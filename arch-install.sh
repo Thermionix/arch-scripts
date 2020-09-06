@@ -125,7 +125,7 @@ set_variables() {
 	#TODO : offer add zfs repo
 
 	install_desktop=false
-	if whiptail --defaultno --yesno "Install Desktop Environment?" 8 40 ; then
+	if whiptail --yesno "Install Desktop Environment?" 8 40 ; then
 		install_desktop=$(whiptail --nocancel --menu "Choose a desktop environment:" 18 70 10 \
 			mate "MATE is the continuation of GNOME 2" \
 			xfce "Xfce is a lightweight desktop environment" \
