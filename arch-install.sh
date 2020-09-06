@@ -89,7 +89,7 @@ set_variables() {
 	enable_ntpd=false
 	enable_sshd=false
 	if [ $setup_network != false ] ; then
-		if whiptail --defaultyes --yesno "Enable network time daemon?\n(synchronize software clock with internet time servers)" 8 60 ; then
+		if whiptail --yesno "Enable network time daemon?\n(synchronize software clock with internet time servers)" 8 60 ; then
 			enable_ntpd=true
 		fi
 
@@ -106,7 +106,7 @@ set_variables() {
 	fi
 
 	install_aur=false
-	if whiptail --defaultyes --yesno "Install AUR helper (yay) to access the\narch user community-driven repository\n(which includes non-FOSS software)" 10 60 ; then
+	if whiptail --yesno "Install AUR helper (yay) to access the\narch user community-driven repository\n(which includes non-FOSS software)" 10 60 ; then
 		install_aur=true
 	fi
 
