@@ -89,7 +89,7 @@ set_variables() {
 	enable_ntpd=false
 	enable_sshd=false
 	if [ $setup_network != false ] ; then
-		if whiptail --yesno "Enable network time daemon?\n(synchronize software clock with internet time servers)" 8 60 ; then
+		if whiptail --defaultyes --yesno "Enable network time daemon?\n(synchronize software clock with internet time servers)" 8 60 ; then
 			enable_ntpd=true
 		fi
 
@@ -106,7 +106,7 @@ set_variables() {
 	fi
 
 	install_aur=false
-	if whiptail --defaultno --yesno "Install AUR helper (yay) to access the\narch user community-driven repository\n(which includes non-FOSS software)" 10 60 ; then
+	if whiptail --defaultyes --yesno "Install AUR helper (yay) to access the\narch user community-driven repository\n(which includes non-FOSS software)" 10 60 ; then
 		install_aur=true
 	fi
 
@@ -205,10 +205,14 @@ partition_disk() {
 	if whiptail --defaultno --yesno "encrypt entire disk with dm-crypt?\n(kernel transparent disk encryption)" 8 40 ; then
 		enable_luks=true
 		luks_keyfile=false
-		if whiptail --yesno "Avoiding having to enter the passphrase twice?\n\nGRUB asks for a passphrase to unlock the LUKS1 encrypted partition, \
+		encrypted_boot=false
+		if whiptail --defaultno --yesno "encrypt grub /boot partition?\n(not recommended for dual-booting)" 8 40 ; then
+			encrypted_boot=true
+			if whiptail --yesno "Avoiding having to enter the passphrase twice?\n\nGRUB asks for a passphrase to unlock the LUKS1 encrypted partition, \
 the partition unlock is not passed on to the initramfs. Hence, you have to enter the passphrase twice at boot: once for GRUB and once for \
 the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; then
-			luks_keyfile=true
+				luks_keyfile=true
+			fi
 		fi
 	fi
 
@@ -224,31 +228,60 @@ the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; the
 	fi
 
 	labelroot="arch-root"
-
-	if $enable_uefi ; then
+	
+	if [ $enable_luks = true ] && [ $encrypted_boot = false ]  ; then
+		labelboot="arch-boot"
+		boot_size=200
+	fi
+	
+	if [ $enable_uefi = true ] ; then
 		parted -s ${DSK} mklabel gpt
 
 		esp_end=501
 		labelesp="arch-esp"
 		partesp="/dev/disk/by-partlabel/$labelesp"
-
+		
 		echo "## creating EFI partition"
 		parted -s ${DSK} -a optimal unit MB mkpart ESI 1 ${esp_end}
 		parted -s ${DSK} set 1 boot on
 		parted -s ${DSK} mkfs 1 fat32
 		parted -s ${DSK} name 1 $labelesp
+		
+		if [ $enable_luks = true ] && [ $encrypted_boot = false ]  ; then
+			boot_end=$(( ${esp_end} + ${boot_size} ))
+			
+			echo "## creating partition $labelboot"
+			parted -s ${DSK} -a optimal unit MB mkpart primary ${esp_end} ${boot_end}
+			parted -s ${DSK} name 2 $labelboot
 
-		echo "## creating partition $labelroot"
-		parted -s ${DSK} -a optimal unit MB -- mkpart primary ${esp_end} -1
-		parted -s ${DSK} name 2 $labelroot
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary ${boot_end} -1
+			parted -s ${DSK} name 3 $labelroot
 
+			partboot="/dev/disk/by-partlabel/$labelboot"	
+		else
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary ${esp_end} -1
+			parted -s ${DSK} name 2 $labelroot
+		fi
 		partroot="/dev/disk/by-partlabel/$labelroot"
 	else
 		parted -s ${DSK} mklabel msdos
+		
+		if [ $enable_luks = true ] && [ $encrypted_boot = false ]  ; then
+			echo "## creating partition $labelboot"
+			parted -s ${DSK} -a optimal unit MB mkpart primary 1 $boot_size
+			partboot="${DSK}1"
 
-		echo "## creating partition $labelroot"
-		parted -s ${DSK} -a optimal unit MB -- mkpart primary 1 -1
-		partroot="${DSK}1"
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary $boot_size -1
+			partroot="${DSK}2"
+		else
+			echo "## creating partition $labelroot"
+			parted -s ${DSK} -a optimal unit MB -- mkpart primary 1 -1
+			partroot="${DSK}1"
+		fi
+		
 	fi
 
 	whiptail --title "generated partition layout" --msgbox "`parted -s ${DSK} print`" 20 70
@@ -257,23 +290,39 @@ the initramfs.\n\nAdd a keyfile embedded in the initramfs to avoid?" 16 60 ; the
 format_disk() {
 	mountpoint="/mnt"
 
-	if $enable_luks ; then
-		maproot="croot"
+	if [ $enable_luks = true ] ; then
+		if [ $encrypted_boot = false ] ; then
+			echo "## cleaning $partboot"
+			wipefs -a $partboot
+			echo "## mkfs $partboot"
+			mkfs.ext4 -q $partboot
+		fi
 
 		# TODO : follow https://savannah.gnu.org/bugs/?55093 & remove --type luks1 when grub2 supports LUKS2 format
-
 		echo "## encrypting $partroot"
-		cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 --type luks1 luksFormat $partroot
+		if [ $encrypted_boot = false ] ; then
+			cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 luksFormat $partroot
+		else
+			cryptsetup --batch-mode --force-password --verify-passphrase --cipher aes-xts-plain64 --key-size 512 --hash sha512 --type luks1 luksFormat $partroot		
+		fi
+	
+		maproot="croot"
+
 		echo "## opening $partroot"
 		cryptsetup luksOpen $partroot $maproot
 		echo "## mkfs /dev/mapper/$maproot"
 		mkfs.ext4 /dev/mapper/$maproot
 		mount /dev/mapper/$maproot $mountpoint
 
-		if $luks_keyfile ; then
+		if [ $luks_keyfile = true ] ; then
 			echo "## adding luks keyfile to avoid multiple passwords on boot"
 			dd bs=512 count=4 if=/dev/random of=/root/crypto_keyfile.bin iflag=fullblock
 			cryptsetup -v luksAddKey $partroot /root/crypto_keyfile.bin
+		fi
+		
+		if [ $encrypted_boot = false ] ; then
+			mkdir -p $mountpoint/boot
+			mount $partboot $mountpoint/boot
 		fi
 	else
 		echo "## mkfs $partroot"
@@ -281,7 +330,7 @@ format_disk() {
 		mount $partroot $mountpoint
 	fi
 
-	if $enable_uefi ; then
+	if [ $enable_uefi = true ] ; then
 		echo "## mkfs $partesp"
 		mkfs.vfat -F 32 $partesp
 
@@ -365,7 +414,7 @@ configure_fstab(){
 	echo "## generating fstab entries"
 	genfstab -U -p $mountpoint >> $mountpoint/etc/fstab
 
-	if $enable_trim ; then
+	if [ $enable_trim = true ] ; then
 		arch_chroot "systemctl enable fstrim.timer"
 	fi
 }
@@ -381,11 +430,11 @@ configure_system(){
 	echo LANG=$selected_locale > $mountpoint/etc/locale.conf
 	arch_chroot "export LANG=$selected_locale"
 
-	if $enable_luks ; then
+	if [ $enable_luks = true ] ; then
 		echo "## adding encrypt hook"
 		sed -i "/^HOOKS/s/filesystems/encrypt filesystems/" $mountpoint/etc/mkinitcpio.conf
 
-		if $luks_keyfile ; then
+		if [ $luks_keyfile = true ] ; then
 			mv /root/crypto_keyfile.bin $mountpoint/crypto_keyfile.bin
 			chmod 000 $mountpoint/crypto_keyfile.bin
 			chmod 600 $mountpoint/boot/initramfs-linux*
@@ -413,7 +462,7 @@ configure_system(){
 	echo "## disabling root login"
 	arch_chroot "passwd --lock root"
 
-	if $enable_swap ; then
+	if [ $enable_swap = true ] ; then
 		pacstrap $mountpoint systemd-swap
 
 		mkdir -p $mountpoint/etc/systemd/swap.conf.d/
@@ -434,33 +483,53 @@ configure_system(){
 
 install_bootloader()
 {
-	# TODO : offer password for grub
-
 	echo "## installing grub to ${DSK}"
 	pacstrap $mountpoint grub os-prober
 
-	if $enable_luks ; then
+	if [ $enable_luks = true ] ; then
 		cryptdevice="cryptdevice=$partroot:$maproot"
 
-		if $enable_trim ; then 
+		if [ $enable_trim = true ] ; then 
 			echo "## appending allow-discards for TRIM support"
 			cryptdevice+=":allow-discards"
 		fi
 
-		#if $luks_keyfile ; then
+		#if [ $luks_keyfile = true ] ; then
 		#	cryptdevice+=" cryptkey=rootfs:/crypto_keyfile.bin"
 		#fi
 		chmod -R g-rwx,o-rwx $mountpoint/boot 
 
 		sed -i -e "\#^GRUB_CMDLINE_LINUX=#s#\"\$#$cryptdevice\"#" $mountpoint/etc/default/grub
 		sed -i -e "s/#GRUB_DISABLE_LINUX_UUID/GRUB_DISABLE_LINUX_UUID/" $mountpoint/etc/default/grub
-
-		echo -e "\nGRUB_ENABLE_CRYPTODISK=y" | tee --append $mountpoint/etc/default/grub
+		
+		if [ $encrypted_boot = true ] ; then
+			sed -i -e "s/#GRUB_ENABLE_CRYPTODISK/GRUB_ENABLE_CRYPTODISK/" $mountpoint/etc/default/grub
+		fi
 	fi
 
-	#echo -e "\nGRUB_DISABLE_SUBMENU=y" | tee --append $mountpoint/etc/default/grub
+	echo -e "\nGRUB_DISABLE_SUBMENU=true" | tee --append $mountpoint/etc/default/grub
 
-	if $enable_uefi ; then
+	sed -i -e "s/GRUB_DEFAULT=0/GRUB_DEFAULT=saved/" $mountpoint/etc/default/grub
+	sed -i -e "s/#GRUB_SAVEDEFAULT/GRUB_SAVEDEFAULT/" $mountpoint/etc/default/grub
+	sed -i -e "s/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/" $mountpoint/etc/default/grub
+	
+	cat <<-EOF | tee $mountpoint/etc/grub.d/40_custom
+menuentry "System shutdown" {
+	echo "System shutting down..."
+	halt
+}
+menuentry "System restart" {
+	echo "System rebooting..."
+	reboot
+}
+if [ ${grub_platform} == "efi" ]; then
+	menuentry "Firmware setup" {
+		fwsetup
+	}
+fi
+EOF
+
+	if [ $enable_uefi = true ] ; then
 		pacstrap $mountpoint dosfstools efibootmgr
 		arch_chroot "grub-install --efi-directory=/efi --target=x86_64-efi --bootloader-id=grub --recheck"
 		#efibootmgr --create --disk ${DSK} --part 1 --loader /EFI/grub/grubx64.efi --label "Grub Boot Manager" --verbose
@@ -475,7 +544,7 @@ install_bootloader()
 	echo "## generating /boot/grub/grub.cfg"
 	arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
 
-	if $enable_luks ; then
+	if [ $enable_luks = true ] ; then
 		echo "## printing cryptdevice line from /boot/grub/grub.cfg"
 		cat $mountpoint/boot/grub/grub.cfg | grep -m 1 "cryptdevice"
 	fi
@@ -513,7 +582,7 @@ enable_ntpd() {
 	echo "## enabling network time daemon"
 	pacstrap $mountpoint ntp
 
-	#if $enable_networkmanager ; then
+	#if [ $enable_networkmanager = true ] ; then
 		# now an aur package??
 		#pacstrap $mountpoint networkmanager-dispatcher-ntpd
 	#fi
@@ -598,7 +667,7 @@ install_desktop_environment() {
 
 	pacstrap $mountpoint mesa $install_driver
 
-	if $multilib_enabled ; then
+	if [ $multilib_enabled = true ] ; then
 		pacstrap $mountpoint lib32-mesa
 	fi
 
@@ -606,12 +675,12 @@ install_desktop_environment() {
 		pacstrap $mountpoint vulkan-icd-loader vulkan-intel intel-media-driver
 	elif [ $install_driver == "xf86-video-amdgpu" ] ; then
 		pacstrap $mountpoint vulkan-icd-loader vulkan-radeon libva-mesa-driver
-		if $multilib_enabled ; then
+		if [ $multilib_enabled = true ] ; then
 			pacstrap $mountpoint lib32-libva-mesa-driver lib32-vulkan-radeon
 		fi
 	elif [ $install_driver == "xf86-video-ati" ] ; then
 		pacstrap $mountpoint mesa-vdpau
-		if $multilib_enabled ; then
+		if [ $multilib_enabled = true ] ; then
 			pacstrap $mountpoint lib32-mesa-vdpau
 		fi
 	elif [ $install_driver == "xf86-video-nouveau" ] ; then
@@ -672,7 +741,7 @@ install_desktop_environment() {
 	echo "## Installing Fonts"
 	pacstrap $mountpoint ttf-droid ttf-liberation ttf-dejavu xorg-fonts-type1
 
-	if $multilib_enabled ; then
+	if [ $multilib_enabled = true ] ; then
 		sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' $mountpoint/etc/pacman.conf
 	fi
 }
@@ -715,12 +784,12 @@ finish_setup() {
 	if whiptail --yesno "Reboot now?" 8 40 ; then
 		echo "## unmounting and rebooting"
 
-		if $enable_uefi ; then
+		if [ $enable_uefi = true ] ; then
 			umount -l $mountpoint/boot/efi
 		fi
 		umount -l $mountpoint
 
-		if $enable_luks ; then
+		if [ $enable_luks = true ] ; then
 			cryptsetup luksClose $maproot
 		fi
 
@@ -741,21 +810,21 @@ function main() {
 	install_bootloader
 	create_user
 	install_network_daemon
-	if $enable_ntpd ; then
+	if [ $enable_ntpd = true ] ; then
 		enable_ntpd
 	fi
-	if $enable_sshd ; then
+	if [ $enable_sshd = true ] ; then
 		enable_sshd
 	fi
 	paccache_cleanup
-	if $install_aur ; then
+	if [ $install_aur = true ] ; then
 		install_aur_helper
 	fi
 	if [ $install_desktop != false ] ; then
 		install_desktop_environment
 	fi
 	install_mirrorlist_reflector_hook
-	if $enable_firejail ; then
+	if [ $enable_firejail = true ] ; then
 		install_firejail
 	fi
 	finish_setup
