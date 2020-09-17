@@ -402,6 +402,7 @@ install_mirrorlist_reflector_hook() {
 }
 
 update_pacman_keys(){
+    echo "${GREEN}## refreshing pacman keys${BLACK}"
     #pacman -Sy --noconfirm archlinux-keyring
     for server in ha.pool.sks-keyservers.net \
                 hkps://keyserver.ubuntu.com:443 \
