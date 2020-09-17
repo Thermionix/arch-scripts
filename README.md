@@ -35,5 +35,5 @@ bash arch-install.sh
 * Hardened kernel available
 * firejail & apparmor support
 
-![Screenshot from 2020-09-06 11-41-24](https://user-images.githubusercontent.com/622615/92316407-0d6bba80-efe3-11ea-86c4-5ba04d289601.png)
-![Screenshot from 2020-09-06 11-42-09](https://user-images.githubusercontent.com/622615/92316404-080e7000-efe3-11ea-98b7-6df7458b7c0c.png)
+![Screenshot_20200906_151900](https://user-images.githubusercontent.com/622615/92319944-2a1ce800-f00d-11ea-8306-7e0305e1e6a1.png)
+![Screenshot_20200906_151944](https://user-images.githubusercontent.com/622615/92319946-2b4e1500-f00d-11ea-9a3d-ce8839634026.png)
