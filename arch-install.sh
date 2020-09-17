@@ -401,10 +401,20 @@ install_mirrorlist_reflector_hook() {
 	EOF
 }
 
+update_pacman_keys(){
+    #pacman -Sy --noconfirm archlinux-keyring
+    for server in ha.pool.sks-keyservers.net \
+                hkps://keyserver.ubuntu.com:443 \
+                hkp://keys.gnupg.net:80 \
+                hkp://p80.pool.sks-keyservers.net:80 \
+                keyserver.ubuntu.com \
+                hkp://keyserver.ubuntu.com:80 \
+                pgp.mit.edu; do
+        pacman-key --refresh-keys --keyserver "$server" && break || echo "${GREEN}## Trying new keyserver...${BLACK}"
+    done
+}
+
 install_base(){
-	#pacman -Sy --noconfirm archlinux-keyring
-	#pacman-key --refresh-keys --keyserver hkps://keyserver.ubuntu.com:443
-	pacman-key --refresh-keys --keyserver hkp://keys.gnupg.net:80
 	echo "${GREEN}## installing base system${BLACK}"
 	pacstrap $mountpoint base $install_kernel linux-firmware
 
@@ -664,7 +674,7 @@ install_desktop_environment() {
 	elif [ $install_desktop == "xfce" ] ; then
 		pacstrap $mountpoint xfce4 xfce4-goodies
 	elif [ $install_desktop == "kde" ] ; then
-		pacstrap $mountpoint plasma plasma-wayland-session kde-graphics-meta kde-utilities-meta dolphin
+		pacstrap $mountpoint plasma plasma-wayland-session kde-graphics-meta kde-utilities-meta dolphin packagekit-qt5
 	elif [ $install_desktop == "budgie-desktop" ] ; then
 		pacstrap $mountpoint budgie-desktop budgie-extras gnome-control-center network-manager-applet gnome-themes-extra
 		# gnome --ignore=gdm,epiphany,cheese,gnome-contacts,gnome-maps,gnome-music,gnome-shell,gnome-shell-extensions,yelp,vino
@@ -801,7 +811,7 @@ finish_setup() {
 		echo "${GREEN}## unmounting and rebooting${BLACK}"
 
 		if [ $enable_uefi = true ] ; then
-			umount -l $mountpoint/boot/efi
+			umount -l $partesp
 		fi
 		umount -l $mountpoint
 
@@ -820,6 +830,7 @@ function main() {
 	check_multilib_required
 	partition_disk
 	format_disk
+	update_pacman_keys
 	install_base
 	configure_fstab
 	configure_system
